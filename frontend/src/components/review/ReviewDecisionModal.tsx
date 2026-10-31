@@ -11,7 +11,8 @@ import {
   Loader2,
   CheckCircle2,
   XCircle,
-  HelpCircle,
+  FileQuestion,
+  ArrowUpRight,
 } from 'lucide-react';
 
 interface ReviewDecisionModalProps {
@@ -30,12 +31,15 @@ export const ReviewDecisionModal: React.FC<ReviewDecisionModalProps> = ({
   const queryClient = useQueryClient();
   const { currentReviewer, showNotification } = useUIStore();
 
-  const [action, setAction] = useState<ReviewStatus>('ACCEPTED_WITH_EXCEPTION');
+  const [action, setAction] = useState<ReviewStatus>('ACCEPT_WITH_JUSTIFICATION');
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!discrepancy) return null;
+
+  const title = discrepancy.explanation || discrepancy.rule_name || discrepancy.description || 'Variance Condition';
+  const page = discrepancy.source_page ?? discrepancy.page_number;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,14 +99,19 @@ export const ReviewDecisionModal: React.FC<ReviewDecisionModalProps> = ({
 
         {/* Discrepancy Context Summary */}
         <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-1.5">
-          <div className="flex items-center justify-between">
-            <span className="font-semibold text-slate-800 flex items-center gap-1.5">
-              <ShieldAlert className="w-4 h-4 text-amber-600" />
-              {discrepancy.rule_id} &bull; {discrepancy.description}
-            </span>
-            <span className="text-[10px] text-slate-500 font-mono">
-              Expected: {discrepancy.expected_value} | Actual: {discrepancy.actual_value}
-            </span>
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start gap-2">
+              <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold text-slate-900 block">{discrepancy.rule_id} &bull; {discrepancy.field_name}</span>
+                <p className="text-slate-700 mt-0.5">{title}</p>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 font-mono text-[11px] text-slate-500">
+            <span>Expected: <strong className="text-slate-800">{discrepancy.expected_value || 'None'}</strong></span>
+            <span>Actual: <strong className="text-red-700">{discrepancy.actual_value || 'Missing'}</strong></span>
+            {page && <span>Page: {page}</span>}
           </div>
         </div>
 
@@ -111,35 +120,10 @@ export const ReviewDecisionModal: React.FC<ReviewDecisionModalProps> = ({
           <label className="block text-xs font-semibold text-slate-700 mb-2">
             Determination Action <span className="text-red-500">*</span>
           </label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <label
               className={`flex items-start gap-2.5 p-3 rounded-lg border cursor-pointer transition ${
-                action === 'APPROVED'
-                  ? 'bg-emerald-50/80 border-emerald-400 text-emerald-950 ring-1 ring-emerald-400'
-                  : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
-              }`}
-            >
-              <input
-                type="radio"
-                name="decision-action"
-                value="APPROVED"
-                checked={action === 'APPROVED'}
-                onChange={() => setAction('APPROVED')}
-                className="mt-0.5 text-emerald-600 focus:ring-emerald-500"
-              />
-              <div>
-                <p className="text-xs font-semibold flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Approve
-                </p>
-                <p className="text-[10px] text-slate-500 mt-0.5">
-                  Extracted data is valid or verified with client.
-                </p>
-              </div>
-            </label>
-
-            <label
-              className={`flex items-start gap-2.5 p-3 rounded-lg border cursor-pointer transition ${
-                action === 'ACCEPTED_WITH_EXCEPTION'
+                action === 'ACCEPT_WITH_JUSTIFICATION'
                   ? 'bg-blue-50/80 border-blue-400 text-blue-950 ring-1 ring-blue-400'
                   : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
               }`}
@@ -147,24 +131,49 @@ export const ReviewDecisionModal: React.FC<ReviewDecisionModalProps> = ({
               <input
                 type="radio"
                 name="decision-action"
-                value="ACCEPTED_WITH_EXCEPTION"
-                checked={action === 'ACCEPTED_WITH_EXCEPTION'}
-                onChange={() => setAction('ACCEPTED_WITH_EXCEPTION')}
+                value="ACCEPT_WITH_JUSTIFICATION"
+                checked={action === 'ACCEPT_WITH_JUSTIFICATION'}
+                onChange={() => setAction('ACCEPT_WITH_JUSTIFICATION')}
                 className="mt-0.5 text-blue-600 focus:ring-blue-500"
               />
               <div>
                 <p className="text-xs font-semibold flex items-center gap-1">
-                  <UserCheck className="w-3.5 h-3.5 text-blue-600" /> Accept Variance
+                  <UserCheck className="w-3.5 h-3.5 text-blue-600" /> Accept w/ Justification
                 </p>
                 <p className="text-[10px] text-slate-500 mt-0.5">
-                  Acceptable tolerance or authorized amendment.
+                  Variance confirmed against contract amendment, discount, or authorized exception.
                 </p>
               </div>
             </label>
 
             <label
               className={`flex items-start gap-2.5 p-3 rounded-lg border cursor-pointer transition ${
-                action === 'REJECTED'
+                action === 'REQUEST_CORRECTION'
+                  ? 'bg-amber-50/80 border-amber-400 text-amber-950 ring-1 ring-amber-400'
+                  : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
+              }`}
+            >
+              <input
+                type="radio"
+                name="decision-action"
+                value="REQUEST_CORRECTION"
+                checked={action === 'REQUEST_CORRECTION'}
+                onChange={() => setAction('REQUEST_CORRECTION')}
+                className="mt-0.5 text-amber-600 focus:ring-amber-500"
+              />
+              <div>
+                <p className="text-xs font-semibold flex items-center gap-1">
+                  <FileQuestion className="w-3.5 h-3.5 text-amber-600" /> Request Correction
+                </p>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  Vendor or internal operations must reissue corrected document.
+                </p>
+              </div>
+            </label>
+
+            <label
+              className={`flex items-start gap-2.5 p-3 rounded-lg border cursor-pointer transition ${
+                action === 'REJECT'
                   ? 'bg-red-50/80 border-red-400 text-red-950 ring-1 ring-red-400'
                   : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
               }`}
@@ -172,17 +181,42 @@ export const ReviewDecisionModal: React.FC<ReviewDecisionModalProps> = ({
               <input
                 type="radio"
                 name="decision-action"
-                value="REJECTED"
-                checked={action === 'REJECTED'}
-                onChange={() => setAction('REJECTED')}
+                value="REJECT"
+                checked={action === 'REJECT'}
+                onChange={() => setAction('REJECT')}
                 className="mt-0.5 text-red-600 focus:ring-red-500"
               />
               <div>
                 <p className="text-xs font-semibold flex items-center gap-1">
-                  <XCircle className="w-3.5 h-3.5 text-red-600" /> Reject
+                  <XCircle className="w-3.5 h-3.5 text-red-600" /> Reject Transaction
                 </p>
                 <p className="text-[10px] text-slate-500 mt-0.5">
-                  Document contains invalid discrepancy; re-issue needed.
+                  Commercial terms strictly non-compliant; document rejected.
+                </p>
+              </div>
+            </label>
+
+            <label
+              className={`flex items-start gap-2.5 p-3 rounded-lg border cursor-pointer transition ${
+                action === 'ESCALATE'
+                  ? 'bg-purple-50/80 border-purple-400 text-purple-950 ring-1 ring-purple-400'
+                  : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
+              }`}
+            >
+              <input
+                type="radio"
+                name="decision-action"
+                value="ESCALATE"
+                checked={action === 'ESCALATE'}
+                onChange={() => setAction('ESCALATE')}
+                className="mt-0.5 text-purple-600 focus:ring-purple-500"
+              />
+              <div>
+                <p className="text-xs font-semibold flex items-center gap-1">
+                  <ArrowUpRight className="w-3.5 h-3.5 text-purple-600" /> Escalate to Legal/Exec
+                </p>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  Requires senior compliance or director level determination.
                 </p>
               </div>
             </label>
@@ -249,4 +283,3 @@ export const ReviewDecisionModal: React.FC<ReviewDecisionModalProps> = ({
     </Modal>
   );
 };
-

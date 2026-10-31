@@ -12,14 +12,23 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
 
   const getStyle = () => {
     switch (s) {
+      case 'ACCEPT_WITH_JUSTIFICATION':
       case 'APPROVED':
       case 'VERIFIED':
       case 'COMPLETED':
         return {
           bg: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
           icon: CheckCircle2,
-          label: s === 'COMPLETED' ? 'Completed' : s === 'VERIFIED' ? 'Verified' : 'Approved',
+          label:
+            s === 'COMPLETED'
+              ? 'Completed'
+              : s === 'VERIFIED'
+              ? 'Verified'
+              : s === 'ACCEPT_WITH_JUSTIFICATION'
+              ? 'Accepted w/ Justification'
+              : 'Approved',
         };
+      case 'REJECT':
       case 'REJECTED':
       case 'FAILED':
         return {
@@ -27,25 +36,20 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
           icon: XCircle,
           label: s === 'FAILED' ? 'Failed' : 'Rejected',
         };
+      case 'REQUEST_CORRECTION':
       case 'ACCEPTED_WITH_EXCEPTION':
         return {
           bg: 'bg-indigo-50 text-indigo-700 border-indigo-200/80',
           icon: ShieldCheck,
-          label: 'Accepted w/ Exception',
+          label: s === 'REQUEST_CORRECTION' ? 'Correction Requested' : 'Accepted w/ Exception',
         };
-      case 'PENDING':
-      case 'RUNNING':
-        return {
-          bg: 'bg-blue-50 text-blue-700 border-blue-200/80',
-          icon: Clock,
-          label: s === 'RUNNING' ? 'Running' : 'Pending',
-        };
-      case 'REVIEW_REQUIRED':
+      case 'ESCALATE':
       case 'ESCALATED':
+      case 'REVIEW_REQUIRED':
         return {
           bg: 'bg-amber-50 text-amber-700 border-amber-200/80',
           icon: AlertCircle,
-          label: s === 'ESCALATED' ? 'Escalated' : 'Review Required',
+          label: s.includes('ESCALAT') ? 'Escalated' : 'Review Required',
         };
       case 'EXTRACTED':
         return {
@@ -53,11 +57,19 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
           icon: CheckSquare,
           label: 'Extracted',
         };
+      case 'KEEP_PENDING':
+      case 'PENDING':
+      case 'RUNNING':
+        return {
+          bg: 'bg-blue-50 text-blue-700 border-blue-200/80',
+          icon: Clock,
+          label: s === 'RUNNING' ? 'Running' : s === 'KEEP_PENDING' ? 'Kept Pending' : 'Pending',
+        };
       default:
         return {
           bg: 'bg-slate-100 text-slate-700 border-slate-200',
           icon: Clock,
-          label: s,
+          label: s || 'Unknown',
         };
     }
   };
@@ -75,4 +87,3 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
     </span>
   );
 };
-

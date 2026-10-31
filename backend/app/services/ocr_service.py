@@ -33,7 +33,7 @@ class OCRService:
             return self._is_available
 
         try:
-            version = pytesseract.get_tesseract_version()
+            version = pytesseract.get_tesseract_version(timeout=2)
             logger.info("Tesseract OCR detected, version: %s", version)
             self._is_available = True
         except Exception as e:

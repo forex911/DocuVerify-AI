@@ -1,0 +1,59 @@
+================================================================================
+  DocuVerify AI - COMMERCIAL VERIFICATION SCENARIO TEST REPORT
+================================================================================
+Report ID       : REP-SCENARIO_2
+Scenario Name   : Financial Overbilling & Line Arithmetic Mismatch
+Workflow ID     : WF-763483AE93
+Order Reference : ORD-PRICE-2026
+Customer Name   : Bavaria Tech GmbH
+Execution Date  : 2026-10-31 11:30:18 UTC
+Workflow Status : REVIEW_REQUIRED
+Human Review    : REQUIRED (Strict Policy)
+--------------------------------------------------------------------------------
+
+1. AUTHORITATIVE PURCHASE ORDER BASELINE:
+   - Order ID       : ORD-PRICE-2026
+   - Authorized Total: EUR 37,000.00
+   - Quantity       : 2000.00 PCS
+   - Unit Price     : $18.50
+   - Destination    : Hamburg Port, Germany
+   - Expected PKGS  : 50
+
+2. INGESTED COMMERCIAL DOCUMENTS (1):
+   - Document ID : DOC-1BE71BC3
+     Filename    : invoice_price_variance_ORD-PRICE-2026.pdf
+     Type        : INVOICE
+
+--------------------------------------------------------------------------------
+3. DETERMINISTIC VERIFICATION FINDINGS (2 Discrepancy Records):
+   [1] Rule ID: FIN-001 (HIGH) - Field: 'grand_total'
+       Condition   : The invoice grand total is EUR 41,500.00, which is EUR 4,500.00 higher than the approved order total of EUR 37,000.00.
+       Expected    : 37000.00
+       Actual      : 41500.00
+       Difference  : 4500.00
+       Source Page : Page 1
+       Source Text : "Grand Total:
+EUR 41,500.00"
+       Review State: PENDING
+
+   [2] Rule ID: FIN-002 (HIGH) - Field: 'line_total'
+       Condition   : Line total mismatch for 'Microcontroller Circuit Modules': 2000 * 18.50 = 37000.00, but line states 39000.00.
+       Expected    : 37000.00
+       Actual      : 39000.00
+       Difference  : 2000.00
+       Source Page : Page 1
+       Source Text : "BAV-CHIP-400 Microcontroller Circuit Modules 2000 PCS @ 18.50 39000.00"
+       Review State: PENDING
+
+--------------------------------------------------------------------------------
+4. HOW TO TEST THIS SCENARIO IN THE UI:
+   1. Open: http://localhost:5173/verification/WF-763483AE93
+   2. Pane 1 (Left)   : Verify that 'Bavaria Tech GmbH' is selected.
+   3. Pane 2 (Center) : Review the digital PDF and switch to 'Extracted Text' mode.
+   4. Pane 3 (Right)  : Review the Field Reconciliation table and Variances list.
+   5. Action          : Click 'Decide' on any variance, enter mandatory justification,
+                        and record your human reviewer determination.
+--------------------------------------------------------------------------------
+Outcome Evaluation:
+FLAGGED: FIN-001 (Grand Total Mismatch €41,500 vs €37,000) and FIN-002 (Line Item Arithmetic Mismatch 2000*18.50=37000 vs 39000).
+================================================================================

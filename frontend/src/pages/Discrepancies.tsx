@@ -6,6 +6,7 @@ import { StatusBadge } from '../components/common/StatusBadge';
 import { LoadingState } from '../components/common/LoadingState';
 import { EmptyState } from '../components/common/EmptyState';
 import { ReviewDecisionModal } from '../components/review/ReviewDecisionModal';
+import { ErrorBoundary } from '../components/common/ErrorBoundary';
 import { Discrepancy } from '../types';
 import {
   AlertTriangle,
@@ -13,19 +14,18 @@ import {
   Search,
   Filter,
   Eye,
-  FileText,
   ShieldAlert,
-  ArrowRight,
+  RotateCcw,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const Discrepancies: React.FC = () => {
+export const DiscrepanciesContent: React.FC = () => {
   const [search, setSearch] = useState('');
   const [severityFilter, setSeverityFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedDiscrepancy, setSelectedDiscrepancy] = useState<Discrepancy | null>(null);
 
-  const { data: discrepancies = [], isLoading, refetch } = useQuery({
+  const { data: discrepancies = [], isLoading, error, refetch } = useQuery({
     queryKey: ['discrepancies', severityFilter, statusFilter],
     queryFn: () =>
       discrepanciesService.getDiscrepancies({
@@ -34,13 +34,20 @@ export const Discrepancies: React.FC = () => {
       }),
   });
 
-  const filtered = discrepancies.filter((d) => {
+  const filtered = (Array.isArray(discrepancies) ? discrepancies : []).filter((d) => {
+    if (!d) return false;
     const q = search.toLowerCase();
+    const desc = (d.explanation || d.description || d.rule_name || '').toLowerCase();
+    const ruleId = (d.rule_id || '').toLowerCase();
+    const fieldName = (d.field_name || '').toLowerCase();
+    const orderId = (d.order_id || '').toLowerCase();
+    const filename = (d.document_filename || '').toLowerCase();
     return (
-      d.description.toLowerCase().includes(q) ||
-      d.rule_id.toLowerCase().includes(q) ||
-      d.field_name.toLowerCase().includes(q) ||
-      (d.order_id && d.order_id.toLowerCase().includes(q))
+      desc.includes(q) ||
+      ruleId.includes(q) ||
+      fieldName.includes(q) ||
+      orderId.includes(q) ||
+      filename.includes(q)
     );
   });
 
@@ -69,7 +76,7 @@ export const Discrepancies: React.FC = () => {
           <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
           <input
             type="text"
-            placeholder="Search by rule ID (e.g. FIN-001), description, field..."
+            placeholder="Search by rule ID (e.g. FIN-001), explanation, field, or document..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-1.5 text-xs rounded-lg border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
@@ -97,21 +104,44 @@ export const Discrepancies: React.FC = () => {
           >
             <option value="">All Review Statuses</option>
             <option value="PENDING">Pending Review</option>
-            <option value="APPROVED">Approved</option>
-            <option value="ACCEPTED_WITH_EXCEPTION">Accepted w/ Exception</option>
-            <option value="REJECTED">Rejected</option>
+            <option value="ACCEPT_WITH_JUSTIFICATION">Accepted w/ Justification</option>
+            <option value="REQUEST_CORRECTION">Correction Requested</option>
+            <option value="REJECT">Rejected</option>
+            <option value="ESCALATE">Escalated</option>
           </select>
+
+          {(severityFilter || statusFilter || search) && (
+            <button
+              onClick={() => {
+                setSeverityFilter('');
+                setStatusFilter('');
+                setSearch('');
+              }}
+              className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg text-xs"
+              title="Reset Filters"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
       {/* Discrepancies Table */}
       {isLoading ? (
         <LoadingState message="Loading discrepancy ledger..." />
+      ) : error ? (
+        <div className="p-8 text-center text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl">
+          Failed to load discrepancies: {(error as any)?.message || 'Internal connection error'}.
+        </div>
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={AlertTriangle}
           title="No discrepancies found"
-          description="There are currently no discrepancy records matching the active filters."
+          description={
+            severityFilter || statusFilter || search
+              ? "No discrepancy records match your current filter parameters."
+              : "No commercial anomalies are currently detected."
+          }
         />
       ) : (
         <div className="card-subtle overflow-hidden">
@@ -120,7 +150,7 @@ export const Discrepancies: React.FC = () => {
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/75">
                   <th className="table-th">Rule & Severity</th>
-                  <th className="table-th">Condition Description</th>
+                  <th className="table-th">Condition & Explanation</th>
                   <th className="table-th">Expected (Order)</th>
                   <th className="table-th">Actual (Document)</th>
                   <th className="table-th">Source Page</th>
@@ -129,59 +159,71 @@ export const Discrepancies: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filtered.map((disc) => (
-                  <tr key={disc.id} className="hover:bg-slate-50/60 transition">
-                    <td className="table-td">
-                      <div className="flex items-center gap-2">
-                        <SeverityBadge severity={disc.severity} size="sm" />
-                        <span className="font-mono font-bold text-slate-900">
-                          {disc.rule_id}
-                        </span>
-                      </div>
-                    </td>
+                {filtered.map((disc) => {
+                  const title = disc.explanation || disc.rule_name || disc.description || 'Discrepancy condition';
+                  const page = disc.source_page ?? disc.page_number;
+                  const isPending = !disc.review_status || disc.review_status === 'PENDING';
 
-                    <td className="table-td font-semibold text-slate-800 max-w-sm">
-                      {disc.description}
-                    </td>
+                  return (
+                    <tr key={disc.id} className="hover:bg-slate-50/60 transition">
+                      <td className="table-td">
+                        <div className="flex items-center gap-2">
+                          <SeverityBadge severity={disc.severity} size="sm" />
+                          <span className="font-mono font-bold text-slate-900">
+                            {disc.rule_id}
+                          </span>
+                        </div>
+                      </td>
 
-                    <td className="table-td font-mono text-slate-700">
-                      {disc.expected_value || '—'}
-                    </td>
+                      <td className="table-td font-medium text-slate-800 max-w-sm">
+                        <div className="space-y-0.5">
+                          <p className="font-semibold text-slate-900 leading-snug">{title}</p>
+                          <span className="text-[10px] text-slate-500 font-mono block">
+                            Field: <strong className="text-slate-700">{disc.field_name}</strong>
+                            {disc.document_filename ? ` • ${disc.document_filename}` : ''}
+                          </span>
+                        </div>
+                      </td>
 
-                    <td className="table-td font-mono font-semibold text-red-700">
-                      {disc.actual_value || 'Missing'}
-                    </td>
+                      <td className="table-td font-mono text-slate-700">
+                        {disc.expected_value || '—'}
+                      </td>
 
-                    <td className="table-td text-slate-500">
-                      {disc.page_number ? `Page ${disc.page_number}` : '—'}
-                    </td>
+                      <td className="table-td font-mono font-semibold text-red-700">
+                        {disc.actual_value || 'Missing'}
+                      </td>
 
-                    <td className="table-td">
-                      <StatusBadge status={disc.review_status} size="sm" />
-                    </td>
+                      <td className="table-td text-slate-500">
+                        {page ? `Page ${page}` : '—'}
+                      </td>
 
-                    <td className="table-td text-right space-x-1">
-                      {disc.workflow_id && (
-                        <Link
-                          to={`/verification/${disc.workflow_id}`}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-[11px] transition"
-                          title="Open Verification Workspace"
+                      <td className="table-td">
+                        <StatusBadge status={disc.review_status} size="sm" />
+                      </td>
+
+                      <td className="table-td text-right space-x-1">
+                        {disc.workflow_id && (
+                          <Link
+                            to={`/verification/${disc.workflow_id}`}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-[11px] transition"
+                            title="Open Verification Workspace"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Workspace</span>
+                          </Link>
+                        )}
+
+                        <button
+                          onClick={() => setSelectedDiscrepancy(disc)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] transition shadow-sm"
                         >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>Workspace</span>
-                        </Link>
-                      )}
-
-                      <button
-                        onClick={() => setSelectedDiscrepancy(disc)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] transition shadow-sm"
-                      >
-                        <UserCheck className="w-3.5 h-3.5" />
-                        <span>{disc.review_status === 'PENDING' ? 'Decide' : 'Edit'}</span>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                          <UserCheck className="w-3.5 h-3.5" />
+                          <span>{isPending ? 'Decide' : 'Update'}</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -199,3 +241,10 @@ export const Discrepancies: React.FC = () => {
   );
 };
 
+export const Discrepancies: React.FC = () => {
+  return (
+    <ErrorBoundary fallbackTitle="Error loading Discrepancies Ledger">
+      <DiscrepanciesContent />
+    </ErrorBoundary>
+  );
+};

@@ -20,6 +20,36 @@ interface FieldComparisonRow {
   sourceText?: string | null;
 }
 
+const getFieldVal = (doc: any, key: string): string | null => {
+  if (!doc) return null;
+  const val = doc[key];
+  if (val != null) {
+    if (typeof val === 'object' && val.value !== undefined) {
+      return val.value != null ? String(val.value) : null;
+    }
+    return String(val);
+  }
+  const prov = doc.fields?.[key];
+  if (prov?.value != null) return String(prov.value);
+  return null;
+};
+
+const getFieldProv = (doc: any, key: string) => {
+  if (!doc) return { pageNumber: null, sourceText: null };
+  const prov = doc.fields?.[key] || (typeof doc[key] === 'object' ? doc[key] : null);
+  return {
+    pageNumber: prov?.page_number ?? doc.source_pages?.[key] ?? null,
+    sourceText: prov?.source_text ?? null,
+  };
+};
+
+const getItems = (doc: any): any[] => {
+  if (!doc) return [];
+  if (Array.isArray(doc.items)) return doc.items;
+  if (Array.isArray(doc.line_items)) return doc.line_items;
+  return [];
+};
+
 export const ComparisonTable: React.FC<ComparisonTableProps> = ({
   order,
   canonicalDoc,
@@ -35,115 +65,114 @@ export const ComparisonTable: React.FC<ComparisonTableProps> = ({
     );
   }
 
+  const items = getItems(canonicalDoc);
+  const firstItem = items[0] || null;
+
+  const orderRefProv = getFieldProv(canonicalDoc, 'order_reference');
+  const customerProv = getFieldProv(canonicalDoc, 'customer_name');
+  const currencyProv = getFieldProv(canonicalDoc, 'currency');
+  const subtotalProv = getFieldProv(canonicalDoc, 'subtotal');
+  const taxProv = getFieldProv(canonicalDoc, 'tax');
+  const freightProv = getFieldProv(canonicalDoc, 'freight');
+  const grandTotalProv = getFieldProv(canonicalDoc, 'grand_total');
+  const destProv = getFieldProv(canonicalDoc, 'destination');
+  const pkgProv = getFieldProv(canonicalDoc, 'package_count');
+
+  const grandTotalVal = getFieldVal(canonicalDoc, 'grand_total');
+  const subtotalVal = getFieldVal(canonicalDoc, 'subtotal');
+  const taxVal = getFieldVal(canonicalDoc, 'tax');
+  const freightVal = getFieldVal(canonicalDoc, 'freight');
+  const pkgVal = getFieldVal(canonicalDoc, 'package_count');
+
   // Construct normalized rows
   const rows: FieldComparisonRow[] = [
     {
       fieldName: 'order_reference',
       label: 'Order Reference',
       orderValue: order ? order.order_number || order.id : null,
-      docValue: canonicalDoc?.order_reference?.value,
-      pageNumber: canonicalDoc?.order_reference?.page_number,
-      sourceText: canonicalDoc?.order_reference?.source_text,
+      docValue: getFieldVal(canonicalDoc, 'order_reference'),
+      pageNumber: orderRefProv.pageNumber,
+      sourceText: orderRefProv.sourceText,
     },
     {
       fieldName: 'customer_name',
       label: 'Customer Name',
       orderValue: order?.customer_name,
-      docValue: canonicalDoc?.customer_name?.value,
-      pageNumber: canonicalDoc?.customer_name?.page_number,
-      sourceText: canonicalDoc?.customer_name?.source_text,
+      docValue: getFieldVal(canonicalDoc, 'customer_name'),
+      pageNumber: customerProv.pageNumber,
+      sourceText: customerProv.sourceText,
     },
     {
       fieldName: 'currency',
       label: 'Currency',
       orderValue: order?.currency,
-      docValue: canonicalDoc?.currency?.value,
-      pageNumber: canonicalDoc?.currency?.page_number,
-      sourceText: canonicalDoc?.currency?.source_text,
+      docValue: getFieldVal(canonicalDoc, 'currency'),
+      pageNumber: currencyProv.pageNumber,
+      sourceText: currencyProv.sourceText,
     },
     {
       fieldName: 'quantity',
       label: 'Total Quantity',
       orderValue: order ? `${order.quantity} PCS` : null,
-      docValue:
-        canonicalDoc?.line_items && canonicalDoc.line_items.length > 0
-          ? `${canonicalDoc.line_items[0].quantity} ${canonicalDoc.line_items[0].unit}`
-          : null,
-      pageNumber: canonicalDoc?.line_items?.[0]?.page_number,
-      sourceText: canonicalDoc?.line_items?.[0]?.source_text,
+      docValue: firstItem ? `${firstItem.quantity} ${firstItem.unit || 'PCS'}` : null,
+      pageNumber: firstItem?.page_number,
+      sourceText: firstItem?.source_text,
     },
     {
       fieldName: 'unit_price',
       label: 'Unit Price',
       orderValue: order ? `$${Number(order.unit_price).toFixed(2)}` : null,
-      docValue:
-        canonicalDoc?.line_items?.[0]?.unit_price != null
-          ? `$${Number(canonicalDoc.line_items[0].unit_price).toFixed(2)}`
-          : null,
-      pageNumber: canonicalDoc?.line_items?.[0]?.page_number,
+      docValue: firstItem?.unit_price != null ? `$${Number(firstItem.unit_price).toFixed(2)}` : null,
+      pageNumber: firstItem?.page_number,
+      sourceText: firstItem?.source_text,
     },
     {
       fieldName: 'subtotal',
       label: 'Subtotal',
       orderValue: order ? `$${Number(order.subtotal).toFixed(2)}` : null,
-      docValue:
-        canonicalDoc?.subtotal?.value != null
-          ? `$${Number(canonicalDoc.subtotal.value).toFixed(2)}`
-          : null,
-      pageNumber: canonicalDoc?.subtotal?.page_number,
-      sourceText: canonicalDoc?.subtotal?.source_text,
+      docValue: subtotalVal != null ? `$${Number(subtotalVal).toFixed(2)}` : null,
+      pageNumber: subtotalProv.pageNumber,
+      sourceText: subtotalProv.sourceText,
     },
     {
       fieldName: 'tax',
       label: 'Tax / VAT',
       orderValue: order ? `$${Number(order.tax).toFixed(2)}` : null,
-      docValue:
-        canonicalDoc?.tax?.value != null
-          ? `$${Number(canonicalDoc.tax.value).toFixed(2)}`
-          : null,
-      pageNumber: canonicalDoc?.tax?.page_number,
-      sourceText: canonicalDoc?.tax?.source_text,
+      docValue: taxVal != null ? `$${Number(taxVal).toFixed(2)}` : null,
+      pageNumber: taxProv.pageNumber,
+      sourceText: taxProv.sourceText,
     },
     {
       fieldName: 'freight',
       label: 'Freight Charges',
       orderValue: order ? `$${Number(order.freight).toFixed(2)}` : null,
-      docValue:
-        canonicalDoc?.freight?.value != null
-          ? `$${Number(canonicalDoc.freight.value).toFixed(2)}`
-          : null,
-      pageNumber: canonicalDoc?.freight?.page_number,
-      sourceText: canonicalDoc?.freight?.source_text,
+      docValue: freightVal != null ? `$${Number(freightVal).toFixed(2)}` : null,
+      pageNumber: freightProv.pageNumber,
+      sourceText: freightProv.sourceText,
     },
     {
       fieldName: 'grand_total',
       label: 'Grand Total Amount',
       orderValue: order ? `$${Number(order.grand_total).toFixed(2)}` : null,
-      docValue:
-        canonicalDoc?.grand_total?.value != null
-          ? `$${Number(canonicalDoc.grand_total.value).toFixed(2)}`
-          : null,
-      pageNumber: canonicalDoc?.grand_total?.page_number,
-      sourceText: canonicalDoc?.grand_total?.source_text,
+      docValue: grandTotalVal != null ? `$${Number(grandTotalVal).toFixed(2)}` : null,
+      pageNumber: grandTotalProv.pageNumber,
+      sourceText: grandTotalProv.sourceText,
     },
     {
       fieldName: 'destination',
       label: 'Destination / Port',
       orderValue: order?.destination,
-      docValue: canonicalDoc?.destination?.value,
-      pageNumber: canonicalDoc?.destination?.page_number,
-      sourceText: canonicalDoc?.destination?.source_text,
+      docValue: getFieldVal(canonicalDoc, 'destination'),
+      pageNumber: destProv.pageNumber,
+      sourceText: destProv.sourceText,
     },
     {
       fieldName: 'package_count',
       label: 'Package Count',
       orderValue: order?.package_count != null ? `${order.package_count} PKGS` : null,
-      docValue:
-        canonicalDoc?.package_count?.value != null
-          ? `${canonicalDoc.package_count.value} PKGS`
-          : null,
-      pageNumber: canonicalDoc?.package_count?.page_number,
-      sourceText: canonicalDoc?.package_count?.source_text,
+      docValue: pkgVal != null ? `${pkgVal} PKGS` : null,
+      pageNumber: pkgProv.pageNumber,
+      sourceText: pkgProv.sourceText,
     },
   ];
 

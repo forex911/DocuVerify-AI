@@ -1,16 +1,32 @@
 // ==========================================
-// DocuVerifyAI - Core Domain Types
+// DocuVerify AI - Core Domain Types
 // ==========================================
 
 export type SeverityLevel = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 
-export type ReviewStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'ACCEPTED_WITH_EXCEPTION';
+export type ReviewStatus =
+  | 'PENDING'
+  | 'ACCEPT_WITH_JUSTIFICATION'
+  | 'REQUEST_CORRECTION'
+  | 'REJECT'
+  | 'ESCALATE'
+  | 'KEEP_PENDING'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'ACCEPTED_WITH_EXCEPTION';
 
 export type DocumentType = 'invoice' | 'packing_list' | 'bill_of_lading' | 'unknown';
 
 export type DocumentStatus = 'PENDING' | 'EXTRACTED' | 'FAILED' | 'VERIFIED' | 'REVIEW_REQUIRED';
 
-export type WorkflowStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'ESCALATED';
+export type WorkflowStatus =
+  | 'PENDING'
+  | 'RUNNING'
+  | 'PROCESSING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'ESCALATED'
+  | 'REVIEW_REQUIRED';
 
 // Field Source & Extracted Field
 export interface ExtractedField {
@@ -39,25 +55,28 @@ export interface CanonicalItem {
 export interface CanonicalDocument {
   document_id: string;
   document_type: DocumentType;
-  order_reference?: ExtractedField | null;
-  customer_name?: ExtractedField | null;
-  customer_address?: ExtractedField | null;
-  consignee?: ExtractedField | null;
-  shipper?: ExtractedField | null;
-  currency?: ExtractedField | null;
-  subtotal?: ExtractedField | null;
-  tax?: ExtractedField | null;
-  freight?: ExtractedField | null;
-  grand_total?: ExtractedField | null;
-  destination?: ExtractedField | null;
-  port_of_loading?: ExtractedField | null;
-  port_of_discharge?: ExtractedField | null;
-  package_count?: ExtractedField | null;
-  gross_weight?: ExtractedField | null;
-  net_weight?: ExtractedField | null;
-  line_items: CanonicalItem[];
-  missing_required_fields: string[];
-  extraction_warnings: string[];
+  order_reference?: any;
+  customer_name?: any;
+  customer_address?: any;
+  consignee?: any;
+  shipper?: any;
+  currency?: any;
+  subtotal?: any;
+  tax?: any;
+  freight?: any;
+  grand_total?: any;
+  destination?: any;
+  port_of_loading?: any;
+  port_of_discharge?: any;
+  package_count?: any;
+  gross_weight?: any;
+  net_weight?: any;
+  items?: CanonicalItem[];
+  line_items?: CanonicalItem[];
+  fields?: Record<string, ExtractedField>;
+  source_pages?: Record<string, number | null>;
+  missing_required_fields?: string[];
+  extraction_warnings?: string[];
 }
 
 // Ingested Document
@@ -120,20 +139,28 @@ export interface Discrepancy {
   document_id: string;
   order_id?: string | null;
   rule_id: string;
+  rule_name?: string | null;
+  rule_version?: string | null;
   field_name: string;
+  discrepancy_type?: string | null;
   severity: SeverityLevel;
-  description: string;
+  description?: string | null;
+  explanation?: string | null;
   expected_value?: string | null;
   actual_value?: string | null;
-  source_text?: string | null;
+  difference?: string | null;
+  source_page?: number | null;
   page_number?: number | null;
+  source_text?: string | null;
   bounding_box?: [number, number, number, number] | null;
-  explanation?: string | null;
-  review_status: ReviewStatus;
+  review_status: string;
   review_comment?: string | null;
   reviewer_id?: string | null;
   reviewed_at?: string | null;
+  document_filename?: string | null;
+  document_type?: string | null;
   created_at: string;
+  updated_at?: string | null;
 }
 
 // Workflow & Agent Trace
@@ -142,11 +169,15 @@ export interface AgentTrace {
   workflow_id: string;
   agent_name: string;
   step_name: string;
+  action?: string;
   status: string;
   input_summary?: string | null;
   output_summary?: string | null;
+  details?: any;
+  duration_ms?: number | null;
   error_message?: string | null;
   created_at: string;
+  timestamp?: string;
 }
 
 export interface WorkflowSummary {
@@ -205,4 +236,3 @@ export interface DashboardSummary {
   document_type_breakdown: Record<string, number>;
   recent_activity: AuditLogEntry[];
 }
-

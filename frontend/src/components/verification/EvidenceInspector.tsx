@@ -25,7 +25,9 @@ export const EvidenceInspector: React.FC<EvidenceInspectorProps> = ({
     );
   }
 
-  const isResolved = discrepancy.review_status !== 'PENDING';
+  const isResolved = discrepancy.review_status && discrepancy.review_status !== 'PENDING';
+  const title = discrepancy.explanation || discrepancy.rule_name || discrepancy.description || 'Variance condition';
+  const page = discrepancy.source_page ?? discrepancy.page_number;
 
   return (
     <div className="flex flex-col h-full bg-white border border-slate-200 rounded-xl overflow-hidden shadow-subtle">
@@ -42,12 +44,12 @@ export const EvidenceInspector: React.FC<EvidenceInspectorProps> = ({
       </div>
 
       <div className="p-5 flex-1 overflow-y-auto space-y-4 text-xs">
-        {/* Description */}
+        {/* Description / Explanation */}
         <div>
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
             Anomalous Condition
           </label>
-          <p className="font-semibold text-slate-900 leading-snug">{discrepancy.description}</p>
+          <p className="font-semibold text-slate-900 leading-snug">{title}</p>
         </div>
 
         {/* Expected vs Actual */}
@@ -78,11 +80,11 @@ export const EvidenceInspector: React.FC<EvidenceInspectorProps> = ({
           <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-lg space-y-1.5">
             <div className="flex items-center justify-between text-[11px] text-amber-900 font-medium">
               <span className="flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5" /> Document ID: {discrepancy.document_id.slice(0, 8)}...
+                <FileText className="w-3.5 h-3.5" /> Document: {discrepancy.document_filename || `${discrepancy.document_id.slice(0, 8)}...`}
               </span>
-              {discrepancy.page_number && (
+              {page && (
                 <span className="px-1.5 py-0.5 bg-amber-200/80 rounded font-semibold text-[10px]">
-                  Page {discrepancy.page_number}
+                  Page {page}
                 </span>
               )}
             </div>
@@ -122,7 +124,7 @@ export const EvidenceInspector: React.FC<EvidenceInspectorProps> = ({
               </span>
             </div>
             <p className="text-xs font-semibold text-emerald-950">
-              Decision: {discrepancy.review_status} by {discrepancy.reviewer_id || 'Reviewer'}
+              Decision: <StatusBadge status={discrepancy.review_status} size="sm" /> by {discrepancy.reviewer_id || 'Reviewer'}
             </p>
             {discrepancy.review_comment && (
               <p className="text-[11px] text-emerald-900 italic bg-white/80 p-2 rounded border border-emerald-200">
@@ -149,4 +151,3 @@ export const EvidenceInspector: React.FC<EvidenceInspectorProps> = ({
     </div>
   );
 };
-

@@ -1,0 +1,42 @@
+================================================================================
+  DocuVerify AI - COMMERCIAL VERIFICATION SCENARIO TEST REPORT
+================================================================================
+Report ID       : REP-SCENARIO_1
+Scenario Name   : Clean Compliance & Exact Verification (Pass)
+Workflow ID     : WF-2579B5904B
+Order Reference : ORD-CLEAN-2026
+Customer Name   : Apex Global Logistics Inc
+Execution Date  : 2026-10-31 11:30:18 UTC
+Workflow Status : REVIEW_REQUIRED
+Human Review    : VERIFIED - READY FOR SIGN-OFF
+--------------------------------------------------------------------------------
+
+1. AUTHORITATIVE PURCHASE ORDER BASELINE:
+   - Order ID       : ORD-CLEAN-2026
+   - Authorized Total: USD 70,000.00
+   - Quantity       : 1500.00 PCS
+   - Unit Price     : $45.00
+   - Destination    : Rotterdam Port, Netherlands
+   - Expected PKGS  : 60
+
+2. INGESTED COMMERCIAL DOCUMENTS (1):
+   - Document ID : DOC-670E73C9
+     Filename    : invoice_clean_ORD-CLEAN-2026.pdf
+     Type        : INVOICE
+
+--------------------------------------------------------------------------------
+3. DETERMINISTIC VERIFICATION FINDINGS (0 Discrepancy Records):
+   [✓] 0 DISCREPANCIES DETECTED.
+   All extracted commercial values match the approved baseline.
+--------------------------------------------------------------------------------
+4. HOW TO TEST THIS SCENARIO IN THE UI:
+   1. Open: http://localhost:5173/verification/WF-2579B5904B
+   2. Pane 1 (Left)   : Verify that 'Apex Global Logistics Inc' is selected.
+   3. Pane 2 (Center) : Review the digital PDF and switch to 'Extracted Text' mode.
+   4. Pane 3 (Right)  : Review the Field Reconciliation table and Variances list.
+   5. Action          : Click 'Decide' on any variance, enter mandatory justification,
+                        and record your human reviewer determination.
+--------------------------------------------------------------------------------
+Outcome Evaluation:
+PASS: 0 Discrepancies. Commercial invoice strictly satisfies authorized baseline purchase order.
+================================================================================

@@ -45,7 +45,7 @@ class Settings:
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
     # OCR configuration
-    OCR_ENABLED: bool = os.getenv("OCR_ENABLED", "true").lower() in ("true", "1", "yes")
+    OCR_ENABLED: bool = os.getenv("OCR_ENABLED", "false").lower() in ("true", "1", "yes")
     TESSERACT_CMD: Optional[str] = os.getenv("TESSERACT_CMD", None)
 
     def init_app(self):

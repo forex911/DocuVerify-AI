@@ -5,19 +5,27 @@ import { documentsService } from '../services/documents.service';
 import { PDFViewer } from '../components/verification/PDFViewer';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { LoadingState } from '../components/common/LoadingState';
+import { ErrorBoundary } from '../components/common/ErrorBoundary';
 import { LaunchVerificationModal } from '../components/common/LaunchVerificationModal';
+import { CanonicalItem } from '../types';
 import {
-  FileText,
-  PlayCircle,
-  Hash,
   Layers,
-  Cpu,
-  CheckCircle,
-  AlertTriangle,
+  PlayCircle,
   ArrowLeft,
+  FileCheck2,
+  FileText,
+  Hash,
 } from 'lucide-react';
 
-export const DocumentDetail: React.FC = () => {
+const getVal = (val: any): string | null => {
+  if (val == null) return null;
+  if (typeof val === 'object' && val.value !== undefined) {
+    return val.value != null ? String(val.value) : null;
+  }
+  return String(val);
+};
+
+export const DocumentDetailContent: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [verifyModalOpen, setVerifyModalOpen] = useState(false);
   const [selectedPage, setSelectedPage] = useState<number | null>(null);
@@ -47,6 +55,14 @@ export const DocumentDetail: React.FC = () => {
   }
 
   const canonical = document.canonical_document;
+  const items: CanonicalItem[] = canonical?.items || canonical?.line_items || [];
+
+  const orderRef = getVal(canonical?.order_reference) || canonical?.fields?.order_reference?.value;
+  const customerName = getVal(canonical?.customer_name) || canonical?.fields?.customer_name?.value;
+  const currency = getVal(canonical?.currency) || canonical?.fields?.currency?.value;
+  const destination = getVal(canonical?.destination) || canonical?.fields?.destination?.value;
+  const grandTotal = getVal(canonical?.grand_total) || canonical?.fields?.grand_total?.value;
+  const packageCount = getVal(canonical?.package_count) || canonical?.fields?.package_count?.value;
 
   return (
     <div className="space-y-6">
@@ -133,37 +149,37 @@ export const DocumentDetail: React.FC = () => {
                 <div>
                   <dt className="text-slate-500 text-[10px] uppercase font-bold">Order Reference</dt>
                   <dd className="font-mono font-bold text-slate-900 mt-0.5">
-                    {canonical.order_reference?.value || <span className="text-slate-300">N/A</span>}
+                    {orderRef || <span className="text-slate-300">N/A</span>}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-slate-500 text-[10px] uppercase font-bold">Customer</dt>
                   <dd className="font-semibold text-slate-900 mt-0.5">
-                    {canonical.customer_name?.value || <span className="text-slate-300">N/A</span>}
+                    {customerName || <span className="text-slate-300">N/A</span>}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-slate-500 text-[10px] uppercase font-bold">Currency</dt>
                   <dd className="font-mono font-semibold text-slate-900 mt-0.5">
-                    {canonical.currency?.value || <span className="text-slate-300">N/A</span>}
+                    {currency || <span className="text-slate-300">N/A</span>}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-slate-500 text-[10px] uppercase font-bold">Destination</dt>
                   <dd className="font-medium text-slate-900 mt-0.5">
-                    {canonical.destination?.value || <span className="text-slate-300">N/A</span>}
+                    {destination || <span className="text-slate-300">N/A</span>}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-slate-500 text-[10px] uppercase font-bold">Grand Total</dt>
                   <dd className="font-mono font-bold text-slate-900 mt-0.5 text-sm text-blue-700">
-                    {canonical.grand_total?.value != null ? `$${Number(canonical.grand_total.value).toLocaleString()}` : 'N/A'}
+                    {grandTotal != null ? `$${Number(grandTotal).toLocaleString()}` : 'N/A'}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-slate-500 text-[10px] uppercase font-bold">Package Count</dt>
                   <dd className="font-mono font-semibold text-slate-900 mt-0.5">
-                    {canonical.package_count?.value || <span className="text-slate-300">N/A</span>}
+                    {packageCount || <span className="text-slate-300">N/A</span>}
                   </dd>
                 </div>
               </dl>
@@ -176,10 +192,10 @@ export const DocumentDetail: React.FC = () => {
           <div className="card-subtle overflow-hidden">
             <div className="p-4 border-b border-slate-200 bg-slate-50/75">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                Extracted Line Items ({canonical?.line_items.length || 0})
+                Extracted Line Items ({items.length})
               </h3>
             </div>
-            {(!canonical || canonical.line_items.length === 0) ? (
+            {items.length === 0 ? (
               <p className="p-6 text-xs text-slate-400 text-center">No line items parsed.</p>
             ) : (
               <div className="overflow-x-auto">
@@ -194,7 +210,7 @@ export const DocumentDetail: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {canonical.line_items.map((item, idx) => (
+                    {items.map((item, idx) => (
                       <tr key={idx} className="hover:bg-slate-50/60">
                         <td className="table-td font-mono font-semibold text-slate-800">
                           {item.sku || 'N/A'}
@@ -265,3 +281,8 @@ export const DocumentDetail: React.FC = () => {
   );
 };
 
+export const DocumentDetail: React.FC = () => (
+  <ErrorBoundary>
+    <DocumentDetailContent />
+  </ErrorBoundary>
+);

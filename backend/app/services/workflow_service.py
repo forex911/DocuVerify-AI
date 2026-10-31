@@ -130,7 +130,10 @@ class WorkflowService:
             # Update Job status to REVIEW_REQUIRED
             if job:
                 job.status = final_state.workflow_status
-                job.details = final_state.final_investigation_report
+                details = dict(final_state.final_investigation_report or {})
+                details["document_ids"] = list(final_state.document_ids)
+                details["order_id"] = final_state.order_id
+                job.details = details
                 job.completed_at = datetime.now(timezone.utc)
                 db.commit()
 
@@ -174,36 +177,102 @@ class WorkflowService:
 
         job = db.query(ProcessingJob).filter(ProcessingJob.id == workflow_id).first()
         if job:
+            details = job.details or {}
+            order_id = details.get("order_id") or (
+                job.target_id if job.target_id and not job.target_id.startswith("DOC-") else None
+            )
+
+            # Resolve document_ids
+            doc_ids = details.get("document_ids") or []
+            if not doc_ids and order_id:
+                docs = db.query(Document.id).filter(Document.order_id == order_id).all()
+                doc_ids = [d[0] for d in docs]
+                if not doc_ids:
+                    disc_doc_ids = db.query(Discrepancy.document_id).filter(Discrepancy.order_id == order_id).distinct().all()
+                    doc_ids = [d[0] for d in disc_doc_ids if d[0]]
+            elif not doc_ids and job.target_id and job.target_id.startswith("DOC-"):
+                doc_ids = [job.target_id]
+
+            if not order_id and doc_ids:
+                first_doc = db.query(Document).filter(Document.id == doc_ids[0]).first()
+                if first_doc and first_doc.order_id:
+                    order_id = first_doc.order_id
+
+            # Resolve discrepancies from database
+            discs = []
+            if doc_ids:
+                for did in doc_ids:
+                    discs.extend(DiscrepancyEngine.list_discrepancies(db, document_id=did))
+            elif order_id:
+                discs = DiscrepancyEngine.list_discrepancies(db, order_id=order_id)
+
+            unique_discs: Dict[str, Any] = {}
+            for d in discs:
+                d_dict = d.model_dump() if hasattr(d, "model_dump") else d
+                unique_discs[d_dict["id"]] = d_dict
+
             return {
                 "workflow_id": job.id,
                 "workflow_status": job.status,
+                "order_id": order_id,
+                "document_ids": doc_ids,
+                "requires_human_review": job.status == "REVIEW_REQUIRED" or len(unique_discs) > 0,
+                "discrepancies": list(unique_discs.values()),
                 "error": job.error,
                 "created_at": job.created_at.isoformat() if job.created_at else None,
                 "completed_at": job.completed_at.isoformat() if job.completed_at else None,
-                "final_investigation_report": job.details,
+                "final_investigation_report": details,
             }
         return None
 
     @classmethod
     def get_agent_logs(cls, workflow_id: str, db: Session) -> List[Dict[str, Any]]:
-        """Retrieves execution traces of each agent for this workflow."""
-        if workflow_id in _active_workflows:
-            return _active_workflows[workflow_id].agent_execution_log
-
-        logs = (
+        """Retrieves execution traces of each agent for this workflow with full step details."""
+        db_logs = (
             db.query(AgentExecutionLog)
             .filter(AgentExecutionLog.workflow_id == workflow_id)
             .order_by(AgentExecutionLog.created_at.asc())
             .all()
         )
-        return [
-            {
-                "agent_name": l.agent_name,
-                "action": l.action,
-                "status": l.status,
-                "details": l.output_summary,
-                "timestamp": l.created_at.isoformat() if l.created_at else "",
-            }
-            for l in logs
-        ]
+        if db_logs:
+            return [
+                {
+                    "id": l.id,
+                    "workflow_id": l.workflow_id,
+                    "agent_name": l.agent_name,
+                    "step_name": l.action,
+                    "action": l.action,
+                    "status": l.status,
+                    "input_summary": l.action,
+                    "output_summary": str(l.output_summary) if l.output_summary else "",
+                    "details": l.output_summary or {},
+                    "duration_ms": l.duration_ms,
+                    "created_at": l.created_at.isoformat() if l.created_at else datetime.now(timezone.utc).isoformat(),
+                    "timestamp": l.created_at.isoformat() if l.created_at else datetime.now(timezone.utc).isoformat(),
+                }
+                for l in db_logs
+            ]
+
+        # Fallback to in-memory active workflow cache if DB not yet flushed
+        if workflow_id in _active_workflows:
+            active_logs = _active_workflows[workflow_id].agent_execution_log or []
+            return [
+                {
+                    "id": f"trace-{idx}",
+                    "workflow_id": workflow_id,
+                    "agent_name": l.get("agent_name", "UnknownAgent"),
+                    "step_name": l.get("action", "Agent Action"),
+                    "action": l.get("action", "Agent Action"),
+                    "status": l.get("status", "SUCCESS"),
+                    "input_summary": str(l.get("action", "")),
+                    "output_summary": str(l.get("details", "")),
+                    "details": l.get("details", {}),
+                    "duration_ms": None,
+                    "created_at": l.get("timestamp") or datetime.now(timezone.utc).isoformat(),
+                    "timestamp": l.get("timestamp") or datetime.now(timezone.utc).isoformat(),
+                }
+                for idx, l in enumerate(active_logs)
+            ]
+
+        return []
 

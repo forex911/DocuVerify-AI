@@ -1,0 +1,71 @@
+================================================================================
+  DocuVerify AI - COMMERCIAL VERIFICATION SCENARIO TEST REPORT
+================================================================================
+Report ID       : REP-SCENARIO_3
+Scenario Name   : Cross-Document Short Shipment & Package Shortage
+Workflow ID     : WF-60EC1F9137
+Order Reference : ORD-SHIP-2026
+Customer Name   : Pacific Rim Trading Corp
+Execution Date  : 2026-10-31 11:30:18 UTC
+Workflow Status : REVIEW_REQUIRED
+Human Review    : REQUIRED (Strict Policy)
+--------------------------------------------------------------------------------
+
+1. AUTHORITATIVE PURCHASE ORDER BASELINE:
+   - Order ID       : ORD-SHIP-2026
+   - Authorized Total: USD 90,000.00
+   - Quantity       : 3000.00 PCS
+   - Unit Price     : $30.00
+   - Destination    : Singapore Port
+   - Expected PKGS  : 100
+
+2. INGESTED COMMERCIAL DOCUMENTS (2):
+   - Document ID : DOC-D570CE5C
+     Filename    : invoice_ORD-SHIP-2026.pdf
+     Type        : INVOICE
+   - Document ID : DOC-B37668FF
+     Filename    : packing_list_shortage_ORD-SHIP-2026.pdf
+     Type        : PACKING_LIST
+
+--------------------------------------------------------------------------------
+3. DETERMINISTIC VERIFICATION FINDINGS (3 Discrepancy Records):
+   [1] Rule ID: QTY-001 (HIGH) - Field: 'quantity'
+       Condition   : The extracted quantity (2700.00) differs from the approved order quantity (3000.00). Variance: 300.00.
+       Expected    : 3000.00
+       Actual      : 2700.00
+       Difference  : 300.00
+       Source Page : Page 1
+       Source Text : "Sum of 1 line item(s): 2700"
+       Review State: PENDING
+
+   [2] Rule ID: XDOC-001 (HIGH) - Field: 'quantity'
+       Condition   : Cross-document quantity mismatch: invoice_ORD-SHIP-2026.pdf states 3000 whereas packing_list_shortage_ORD-SHIP-2026.pdf states 2700.
+       Expected    : 3000 [invoice_ORD-SHIP-2026.pdf]
+       Actual      : 2700 [packing_list_shortage_ORD-SHIP-2026.pdf]
+       Difference  : 300
+       Source Page : Page 1
+       Source Text : "Sum of 1 line item(s): 2700"
+       Review State: PENDING
+
+   [3] Rule ID: XDOC-002 (MEDIUM) - Field: 'package_count'
+       Condition   : Cross-document package count mismatch: invoice_ORD-SHIP-2026.pdf lists 100 pkgs, but packing_list_shortage_ORD-SHIP-2026.pdf lists 90 pkgs.
+       Expected    : 100 [invoice_ORD-SHIP-2026.pdf]
+       Actual      : 90 [packing_list_shortage_ORD-SHIP-2026.pdf]
+       Difference  : 10
+       Source Page : Page 1
+       Source Text : "Package Count:
+90"
+       Review State: PENDING
+
+--------------------------------------------------------------------------------
+4. HOW TO TEST THIS SCENARIO IN THE UI:
+   1. Open: http://localhost:5173/verification/WF-60EC1F9137
+   2. Pane 1 (Left)   : Verify that 'Pacific Rim Trading Corp' is selected.
+   3. Pane 2 (Center) : Review the digital PDF and switch to 'Extracted Text' mode.
+   4. Pane 3 (Right)  : Review the Field Reconciliation table and Variances list.
+   5. Action          : Click 'Decide' on any variance, enter mandatory justification,
+                        and record your human reviewer determination.
+--------------------------------------------------------------------------------
+Outcome Evaluation:
+FLAGGED: XDOC-001 (Cross-Doc Quantity: Invoice 3000 vs Packing List 2700) and XDOC-002 (Package Count: Invoice 100 vs Packing List 90).
+================================================================================

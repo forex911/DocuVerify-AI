@@ -44,7 +44,7 @@ def build_verification_graph():
 
     def node_synchronize(state: WorkflowState) -> Dict[str, Any]:
         logs = list(state.agent_execution_log)
-        logs.append({
+        sync_log = {
             "agent_name": "SupervisorAgent",
             "action": "Synchronized extracted documents and matched order baseline.",
             "status": "SUCCESS",
@@ -53,7 +53,13 @@ def build_verification_graph():
                 "document_count": len(state.extracted_documents),
             },
             "timestamp": "",
-        })
+        }
+        logs.append(sync_log)
+        db: Session = SessionLocal()
+        try:
+            _persist_agent_logs(db, state.workflow_id, logs)
+        finally:
+            db.close()
         return {"agent_execution_log": logs}
 
     def node_validation(state: WorkflowState) -> Dict[str, Any]:
@@ -149,7 +155,7 @@ def _persist_agent_logs(db: Session, workflow_id: str, logs: list):
                 workflow_id=workflow_id,
                 agent_name=log.get("agent_name", "UnknownAgent"),
                 action=action_name,
-                input_summary={},
+                input_summary={"step": action_name},
                 output_summary=log.get("details", {}),
                 status=log.get("status", "SUCCESS"),
             )

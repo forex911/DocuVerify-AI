@@ -259,9 +259,21 @@ def validate_line_arithmetic(
 
     sum_lines = Decimal("0.00")
     for item in items:
-        qty = Decimal(str(getattr(item, "quantity", 0)))
-        price = Decimal(str(getattr(item, "unit_price", 0)))
-        actual_line = Decimal(str(getattr(item, "line_total", 0)))
+        if isinstance(item, dict):
+            qty = Decimal(str(item.get("quantity", 0)))
+            price = Decimal(str(item.get("unit_price", 0)))
+            actual_line = Decimal(str(item.get("line_total", 0)))
+            page_num = item.get("page_number")
+            source_text = item.get("source_text")
+            desc = item.get("description", "item")
+        else:
+            qty = Decimal(str(getattr(item, "quantity", 0)))
+            price = Decimal(str(getattr(item, "unit_price", 0)))
+            actual_line = Decimal(str(getattr(item, "line_total", 0)))
+            page_num = getattr(item, "page_number", None)
+            source_text = getattr(item, "source_text", None)
+            desc = getattr(item, "description", "item")
+
         expected_line = qty * price
         diff = abs(expected_line - actual_line)
 
@@ -276,9 +288,9 @@ def validate_line_arithmetic(
                 "difference": f"{diff:.2f}",
                 "rule_id": RuleID.FIN_002.value,
                 "rule_version": rule["version"],
-                "source_page": getattr(item, "page_number", None),
-                "source_text": getattr(item, "source_text", None),
-                "explanation": f"Line total mismatch for '{getattr(item, 'description', 'item')}': {qty} * {price} = {expected_line:.2f}, but line states {actual_line:.2f}.",
+                "source_page": page_num,
+                "source_text": source_text,
+                "explanation": f"Line total mismatch for '{desc}': {qty} * {price} = {expected_line:.2f}, but line states {actual_line:.2f}.",
             })
         sum_lines += actual_line
 

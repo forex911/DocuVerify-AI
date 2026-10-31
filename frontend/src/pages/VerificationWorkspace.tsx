@@ -8,6 +8,9 @@ import { PDFViewer } from '../components/verification/PDFViewer';
 import { ComparisonTable } from '../components/verification/ComparisonTable';
 import { EvidenceInspector } from '../components/verification/EvidenceInspector';
 import { ReviewDecisionModal } from '../components/review/ReviewDecisionModal';
+import { AgentProgressPipeline } from '../components/agents/AgentProgressPipeline';
+import { AgentTimeline } from '../components/agents/AgentTimeline';
+import { ErrorBoundary } from '../components/common/ErrorBoundary';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { SeverityBadge } from '../components/common/SeverityBadge';
 import { LoadingState } from '../components/common/LoadingState';
@@ -21,17 +24,19 @@ import {
   CheckCircle2,
   ArrowLeft,
   RefreshCw,
-  ExternalLink,
   Layers,
-  HelpCircle,
+  ChevronDown,
+  ChevronUp,
+  SlidersHorizontal,
 } from 'lucide-react';
 
-export const VerificationWorkspace: React.FC = () => {
+export const VerificationWorkspaceContent: React.FC = () => {
   const { workflowId } = useParams<{ workflowId: string }>();
 
   const [activeDocId, setActiveDocId] = useState<string | null>(null);
   const [selectedDiscrepancy, setSelectedDiscrepancy] = useState<Discrepancy | null>(null);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [tracesDrawerOpen, setTracesDrawerOpen] = useState(false);
   const [rightTab, setRightTab] = useState<'comparison' | 'evidence' | 'discrepancies'>('comparison');
 
   // Fetch Workflow status and findings
@@ -44,21 +49,55 @@ export const VerificationWorkspace: React.FC = () => {
     queryFn: () => workflowsService.getWorkflow(workflowId!),
     enabled: !!workflowId,
     refetchInterval: (query) => {
-      // Poll while running
       const st = query.state.data?.workflow_status;
-      return st === 'RUNNING' || st === 'PENDING' ? 3000 : false;
+      return st === 'RUNNING' || st === 'PENDING' || st === 'PROCESSING' ? 1500 : false;
     },
   });
 
-  // Set default active doc
-  useEffect(() => {
-    if (workflow?.document_ids && workflow.document_ids.length > 0 && !activeDocId) {
-      setActiveDocId(workflow.document_ids[0]);
+  // Fetch live agent execution traces
+  const { data: traceData, refetch: refetchAgents } = useQuery({
+    queryKey: ['workflow-agents', workflowId],
+    queryFn: () => workflowsService.getWorkflowAgents(workflowId!),
+    enabled: !!workflowId,
+    refetchInterval: (query) => {
+      const st = workflow?.workflow_status;
+      return st === 'RUNNING' || st === 'PENDING' || st === 'PROCESSING' ? 1500 : false;
+    },
+  });
+
+  const traces = traceData?.agent_traces || [];
+
+  // Fetch all documents in system for fallback & metadata resolution
+  const { data: allDocs = [] } = useQuery({
+    queryKey: ['documents'],
+    queryFn: () => documentsService.getDocuments(),
+  });
+
+  // Calculate effective list of document IDs
+  const effectiveDocIds = React.useMemo(() => {
+    if (workflow?.document_ids && workflow.document_ids.length > 0) {
+      return workflow.document_ids;
     }
+    if (workflow?.order_id) {
+      const orderDocs = allDocs.filter((d) => d.order_id === workflow.order_id);
+      if (orderDocs.length > 0) return orderDocs.map((d) => d.id);
+    }
+    return allDocs.map((d) => d.id);
+  }, [workflow, allDocs]);
+
+  // Keep activeDocId synchronized to an existing document
+  useEffect(() => {
+    if (effectiveDocIds.length > 0 && (!activeDocId || !effectiveDocIds.includes(activeDocId))) {
+      setActiveDocId(effectiveDocIds[0]);
+    }
+  }, [effectiveDocIds, activeDocId]);
+
+  // Set default discrepancy if available
+  useEffect(() => {
     if (workflow?.discrepancies && workflow.discrepancies.length > 0 && !selectedDiscrepancy) {
       setSelectedDiscrepancy(workflow.discrepancies[0]);
     }
-  }, [workflow]);
+  }, [workflow?.discrepancies]);
 
   // Fetch active document details
   const { data: activeDoc } = useQuery({
@@ -68,7 +107,12 @@ export const VerificationWorkspace: React.FC = () => {
   });
 
   // Fetch approved order
-  const orderId = workflow?.order_id || activeDoc?.order_id;
+  const orderId =
+    workflow?.order_id ||
+    activeDoc?.order_id ||
+    (allDocs.length > 0 ? allDocs[0].order_id : null) ||
+    'ORD-10245';
+
   const { data: order } = useQuery({
     queryKey: ['order', orderId],
     queryFn: () => ordersService.getOrder(orderId!),
@@ -107,23 +151,31 @@ export const VerificationWorkspace: React.FC = () => {
               Verification Workspace
             </h1>
             <span className="font-mono text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700">
-              {workflow.workflow_id.slice(0, 16)}...
+              {workflow.workflow_id}
             </span>
             <StatusBadge status={workflow.workflow_status} size="sm" />
           </div>
         </div>
 
         <div className="flex items-center gap-2 text-xs">
-          <Link
-            to={`/agents/${workflow.workflow_id}`}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition shadow-subtle"
+          <button
+            onClick={() => setTracesDrawerOpen((prev) => !prev)}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-medium transition shadow-subtle ${
+              tracesDrawerOpen
+                ? 'border-blue-400 bg-blue-50 text-blue-700'
+                : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+            }`}
           >
             <Bot className="w-3.5 h-3.5 text-blue-600" />
-            <span>Agent Traces ({workflow.agent_logs_count})</span>
-          </Link>
+            <span>Agent Traces ({traces.length || workflow.agent_logs_count})</span>
+            {tracesDrawerOpen ? <ChevronUp className="w-3.5 h-3.5 ml-0.5" /> : <ChevronDown className="w-3.5 h-3.5 ml-0.5" />}
+          </button>
 
           <button
-            onClick={() => refetchWorkflow()}
+            onClick={() => {
+              refetchWorkflow();
+              refetchAgents();
+            }}
             className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition"
             title="Refresh findings"
           >
@@ -145,6 +197,21 @@ export const VerificationWorkspace: React.FC = () => {
         </span>
       </div>
 
+      {/* Multi-Agent Progress Pipeline (Live 6-Step Stepper) */}
+      <AgentProgressPipeline
+        traces={traces}
+        workflowStatus={workflow.workflow_status}
+        discrepanciesCount={discrepancies.length}
+        onSelectAgent={() => setTracesDrawerOpen(true)}
+      />
+
+      {/* Collapsible Agent Execution Traces Drawer */}
+      {tracesDrawerOpen && (
+        <div className="animate-fadeIn">
+          <AgentTimeline traces={traces} workflowStatus={workflow.workflow_status} />
+        </div>
+      )}
+
       {/* 3-Pane Workstation Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* ============================================================== */}
@@ -153,41 +220,60 @@ export const VerificationWorkspace: React.FC = () => {
         <div className="lg:col-span-3 space-y-4">
           {/* Document Selector Tabs */}
           <div className="card-subtle p-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 mb-2 flex items-center gap-1.5">
-              <FileText className="w-3.5 h-3.5 text-blue-600" />
-              <span>Commercial Documents ({workflow.document_ids.length})</span>
-            </h3>
-            <div className="space-y-1.5">
-              {workflow.document_ids.map((docId) => {
-                const isActive = docId === activeDocId;
-                return (
-                  <button
-                    key={docId}
-                    onClick={() => setActiveDocId(docId)}
-                    className={`w-full text-left p-2.5 rounded-lg text-xs font-medium transition-all ${
-                      isActive
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200/60'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="truncate block font-semibold">
-                        {activeDoc && activeDoc.id === docId
-                          ? activeDoc.original_filename
-                          : `Doc ${docId.slice(0, 8)}...`}
-                      </span>
-                      {isActive && <span className="text-[10px] uppercase font-bold tracking-wider">Active</span>}
-                    </div>
-                    <span
-                      className={`text-[10px] block mt-0.5 ${
-                        isActive ? 'text-blue-100' : 'text-slate-400'
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-blue-600" />
+                <span>Commercial Documents ({effectiveDocIds.length})</span>
+              </h3>
+            </div>
+
+            <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+              {effectiveDocIds.length === 0 ? (
+                <p className="text-xs text-slate-400 italic p-2 text-center">
+                  No documents found. Upload a commercial PDF to begin.
+                </p>
+              ) : (
+                effectiveDocIds.map((docId) => {
+                  const docObj =
+                    allDocs.find((d) => d.id === docId) ||
+                    (activeDoc?.id === docId ? activeDoc : null);
+                  const filename =
+                    docObj?.original_filename || `Document ${docId.slice(0, 8)}...`;
+                  const docType = docObj?.document_type || 'Commercial Doc';
+                  const isActive = docId === activeDocId;
+
+                  return (
+                    <button
+                      key={docId}
+                      onClick={() => setActiveDocId(docId)}
+                      className={`w-full text-left p-2.5 rounded-lg text-xs font-medium transition-all ${
+                        isActive
+                          ? 'bg-blue-600 text-white shadow-sm ring-1 ring-blue-500'
+                          : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200/60'
                       }`}
                     >
-                      ID: {docId.slice(0, 10)}...
-                    </span>
-                  </button>
-                );
-              })}
+                      <div className="flex items-center justify-between">
+                        <span className="truncate block font-semibold text-xs" title={filename}>
+                          {filename}
+                        </span>
+                        {isActive && (
+                          <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.2 bg-blue-700 text-white rounded shrink-0 ml-1">
+                            Active
+                          </span>
+                        )}
+                      </div>
+                      <div
+                        className={`flex items-center justify-between text-[10px] mt-1 ${
+                          isActive ? 'text-blue-100' : 'text-slate-400'
+                        }`}
+                      >
+                        <span className="capitalize">{docType.replace('_', ' ')}</span>
+                        <span className="font-mono">ID: {docId.slice(0, 10)}...</span>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
             </div>
           </div>
 
@@ -205,15 +291,15 @@ export const VerificationWorkspace: React.FC = () => {
                   <span className="font-semibold text-slate-900">{order.customer_name}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] uppercase text-slate-400 block font-bold">Order ID</span>
-                  <Link to={`/orders/${order.id}`} className="font-mono text-blue-600 hover:underline">
+                  <span className="text-[10px] uppercase text-slate-400 block font-bold">Approved Order ID</span>
+                  <Link to={`/orders/${order.id}`} className="font-mono text-blue-600 hover:underline font-semibold">
                     {order.id}
                   </Link>
                 </div>
                 <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
                   <div>
                     <span className="text-[10px] uppercase text-slate-400 block font-bold">Authorized Total</span>
-                    <span className="font-mono font-bold text-slate-900">
+                    <span className="font-mono font-bold text-slate-900 text-blue-700">
                       {order.currency} {Number(order.grand_total).toLocaleString()}
                     </span>
                   </div>
@@ -240,15 +326,15 @@ export const VerificationWorkspace: React.FC = () => {
                   <Bot className="w-3.5 h-3.5 text-blue-600" />
                   <span>Agent Briefing</span>
                 </h3>
-                {investigationReport.risk_level && (
+                {investigationReport.total_discrepancies != null && (
                   <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-100 text-amber-800">
-                    {investigationReport.risk_level} Risk
+                    {investigationReport.total_discrepancies} Variances
                   </span>
                 )}
               </div>
 
               <p className="text-slate-700 leading-relaxed text-[11px]">
-                {investigationReport.summary || 'Reconciliation completed.'}
+                {investigationReport.summary_conclusion || investigationReport.summary || 'Deterministic reconciliation completed.'}
               </p>
 
               {investigationReport.recommended_action && (
@@ -267,7 +353,7 @@ export const VerificationWorkspace: React.FC = () => {
           <PDFViewer
             documentId={activeDocId || undefined}
             filename={activeDoc?.original_filename || 'Commercial PDF'}
-            highlightPage={selectedDiscrepancy?.page_number}
+            highlightPage={selectedDiscrepancy?.source_page ?? selectedDiscrepancy?.page_number}
             highlightText={selectedDiscrepancy?.source_text}
           />
         </div>
@@ -335,6 +421,8 @@ export const VerificationWorkspace: React.FC = () => {
               ) : (
                 discrepancies.map((disc) => {
                   const isSelected = selectedDiscrepancy?.id === disc.id;
+                  const title = disc.explanation || disc.rule_name || disc.description || 'Discrepancy condition';
+                  const page = disc.source_page ?? disc.page_number;
                   return (
                     <div
                       key={disc.id}
@@ -358,11 +446,11 @@ export const VerificationWorkspace: React.FC = () => {
                         <StatusBadge status={disc.review_status} size="sm" />
                       </div>
                       <p className="text-xs font-semibold text-slate-900 leading-snug">
-                        {disc.description}
+                        {title}
                       </p>
                       <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2 pt-1 border-t border-slate-100">
                         <span>Field: {disc.field_name}</span>
-                        {disc.page_number && <span>Page {disc.page_number}</span>}
+                        {page && <span>Page {page}</span>}
                       </div>
                     </div>
                   );
@@ -390,9 +478,17 @@ export const VerificationWorkspace: React.FC = () => {
         onClose={() => setReviewModalOpen(false)}
         onSuccess={() => {
           refetchWorkflow();
+          refetchAgents();
         }}
       />
     </div>
   );
 };
 
+export const VerificationWorkspace: React.FC = () => {
+  return (
+    <ErrorBoundary fallbackTitle="Error loading Verification Workspace">
+      <VerificationWorkspaceContent />
+    </ErrorBoundary>
+  );
+};

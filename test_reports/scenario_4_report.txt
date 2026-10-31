@@ -1,0 +1,53 @@
+================================================================================
+  DocuVerify AI - COMMERCIAL VERIFICATION SCENARIO TEST REPORT
+================================================================================
+Report ID       : REP-SCENARIO_4
+Scenario Name   : Destination Port Divergence & Routing Variance
+Workflow ID     : WF-E6C7D93E09
+Order Reference : ORD-DEST-2026
+Customer Name   : Nordic Industrial Solutions
+Execution Date  : 2026-10-31 11:30:18 UTC
+Workflow Status : REVIEW_REQUIRED
+Human Review    : REQUIRED (Strict Policy)
+--------------------------------------------------------------------------------
+
+1. AUTHORITATIVE PURCHASE ORDER BASELINE:
+   - Order ID       : ORD-DEST-2026
+   - Authorized Total: USD 32,000.00
+   - Quantity       : 800.00 PCS
+   - Unit Price     : $40.00
+   - Destination    : Oslo Port, Norway
+   - Expected PKGS  : 30
+
+2. INGESTED COMMERCIAL DOCUMENTS (2):
+   - Document ID : DOC-FB23BE29
+     Filename    : invoice_diverted_ORD-DEST-2026.pdf
+     Type        : INVOICE
+   - Document ID : DOC-FD5458F1
+     Filename    : bill_of_lading_diverted_ORD-DEST-2026.pdf
+     Type        : BILL_OF_LADING
+
+--------------------------------------------------------------------------------
+3. DETERMINISTIC VERIFICATION FINDINGS (1 Discrepancy Records):
+   [1] Rule ID: DEST-001 (MEDIUM) - Field: 'destination'
+       Condition   : Destination in bill_of_lading ('Gothenburg Port, Sweden') differs from approved destination ('Oslo Port, Norway').
+       Expected    : Oslo Port, Norway
+       Actual      : Gothenburg Port, Sweden
+       Difference  : Destination mismatch
+       Source Page : Page 1
+       Source Text : "Port of Discharge:
+Gothenburg Port, Sweden"
+       Review State: PENDING
+
+--------------------------------------------------------------------------------
+4. HOW TO TEST THIS SCENARIO IN THE UI:
+   1. Open: http://localhost:5173/verification/WF-E6C7D93E09
+   2. Pane 1 (Left)   : Verify that 'Nordic Industrial Solutions' is selected.
+   3. Pane 2 (Center) : Review the digital PDF and switch to 'Extracted Text' mode.
+   4. Pane 3 (Right)  : Review the Field Reconciliation table and Variances list.
+   5. Action          : Click 'Decide' on any variance, enter mandatory justification,
+                        and record your human reviewer determination.
+--------------------------------------------------------------------------------
+Outcome Evaluation:
+FLAGGED: DEST-001 (Destination Mismatch: Approved 'Oslo Port, Norway' vs Actual 'Gothenburg Port, Sweden').
+================================================================================

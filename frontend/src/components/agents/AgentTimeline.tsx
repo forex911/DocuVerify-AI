@@ -5,10 +5,12 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
+  AlertTriangle,
   ChevronDown,
   ChevronUp,
   Workflow,
   Cpu,
+  Terminal,
 } from 'lucide-react';
 
 interface AgentTimelineProps {
@@ -23,50 +25,17 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({ traces, workflowSt
     setExpandedTraceId((curr) => (curr === id ? null : id));
   };
 
-  const agentCatalog = [
-    {
-      name: 'Supervisor Agent',
-      code: 'SUPERVISOR',
-      desc: 'Orchestrates the LangGraph state machine, routes work, handles retries, and tracks workflow state.',
-    },
-    {
-      name: 'Document Intelligence Agent',
-      code: 'DOCUMENT_INTELLIGENCE',
-      desc: 'Extracts digital text page-by-page, classifies document types, structures canonical schemas.',
-    },
-    {
-      name: 'Order Matching Agent',
-      code: 'ORDER_MATCHING',
-      desc: 'Correlates documents against customer orders, resolves PO references, loads authoritative baseline.',
-    },
-    {
-      name: 'Validation Agent',
-      code: 'VALIDATION',
-      desc: 'Applies deterministic rules (QTY-001, FIN-001, DEST-001) using Decimal precision and tolerances.',
-    },
-    {
-      name: 'Reconciliation Agent',
-      code: 'RECONCILIATION',
-      desc: 'Cross-checks multi-document commercial sets (Invoices, Packing Lists, Bills of Lading).',
-    },
-    {
-      name: 'Explanation Agent',
-      code: 'EXPLANATION',
-      desc: 'Synthesizes traceable evidence, root cause explanations, and human reviewer briefings.',
-    },
-  ];
-
   return (
     <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-subtle">
       <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Workflow className="w-4 h-4 text-blue-600" />
           <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-            Multi-Agent Execution Pipeline
+            Multi-Agent Execution Pipeline Trace
           </h4>
         </div>
         <span className="text-[11px] font-medium text-slate-500">
-          {traces.length} Agent Steps Recorded
+          {traces.length} Specialist Actions Recorded
         </span>
       </div>
 
@@ -75,22 +44,26 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({ traces, workflowSt
           No agent traces recorded yet for this verification workflow.
         </div>
       ) : (
-        <div className="p-5 space-y-4">
+        <div className="p-5 space-y-3.5">
           {traces.map((trace, idx) => {
-            const isExpanded = expandedTraceId === trace.id;
-            const isCompleted = trace.status === 'COMPLETED' || trace.status === 'SUCCESS';
-            const isFailed = trace.status === 'FAILED';
+            const traceKey = trace.id || `trace-${idx}`;
+            const isExpanded = expandedTraceId === traceKey;
+            const st = (trace.status || '').toUpperCase();
+            const isCompleted = st === 'COMPLETED' || st === 'SUCCESS';
+            const isWarning = st === 'DISCREPANCIES_DETECTED';
+            const isSkipped = st === 'SKIPPED';
+            const isFailed = st === 'FAILED' || st === 'ERROR';
 
             return (
               <div
-                key={trace.id || idx}
+                key={traceKey}
                 className={`border rounded-lg transition-all ${
-                  isExpanded ? 'border-blue-300 bg-blue-50/20' : 'border-slate-200 bg-white'
+                  isExpanded ? 'border-blue-300 bg-blue-50/20 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'
                 }`}
               >
                 {/* Step Header */}
                 <div
-                  onClick={() => toggleExpand(trace.id)}
+                  onClick={() => toggleExpand(traceKey)}
                   className="flex items-center justify-between p-3.5 cursor-pointer hover:bg-slate-50/80 transition rounded-lg"
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -98,8 +71,12 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({ traces, workflowSt
                       className={`p-2 rounded-lg shrink-0 ${
                         isCompleted
                           ? 'bg-emerald-50 text-emerald-600'
+                          : isWarning
+                          ? 'bg-amber-50 text-amber-600'
                           : isFailed
                           ? 'bg-red-50 text-red-600'
+                          : isSkipped
+                          ? 'bg-slate-100 text-slate-500'
                           : 'bg-blue-50 text-blue-600'
                       }`}
                     >
@@ -112,11 +89,11 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({ traces, workflowSt
                           {trace.agent_name}
                         </span>
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-mono">
-                          {trace.step_name}
+                          {trace.step_name || trace.action || 'Agent Step'}
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-500 mt-0.5 truncate">
-                        {trace.input_summary || 'Task step executed in workflow'}
+                        {trace.input_summary || trace.action || 'Task step executed in workflow'}
                       </p>
                     </div>
                   </div>
@@ -126,23 +103,33 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({ traces, workflowSt
                       className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                         isCompleted
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : isWarning
+                          ? 'bg-amber-50 text-amber-800 border border-amber-200'
                           : isFailed
                           ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                          : isSkipped
+                          ? 'bg-slate-100 text-slate-600 border border-slate-200'
                           : 'bg-blue-50 text-blue-700 border border-blue-200'
                       }`}
                     >
                       {isCompleted ? (
                         <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      ) : isWarning ? (
+                        <AlertTriangle className="w-3 h-3 text-amber-600" />
                       ) : isFailed ? (
                         <AlertCircle className="w-3 h-3 text-rose-600" />
+                      ) : isSkipped ? (
+                        <Clock className="w-3 h-3 text-slate-400" />
                       ) : (
                         <Clock className="w-3 h-3 text-blue-600" />
                       )}
-                      <span>{trace.status}</span>
+                      <span>{trace.status || 'SUCCESS'}</span>
                     </span>
 
-                    <span className="text-[10px] text-slate-400">
-                      {trace.created_at ? new Date(trace.created_at).toLocaleTimeString() : ''}
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {trace.created_at || trace.timestamp
+                        ? new Date(trace.created_at || trace.timestamp || '').toLocaleTimeString()
+                        : ''}
                     </span>
 
                     <button className="text-slate-400 hover:text-slate-600">
@@ -157,11 +144,11 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({ traces, workflowSt
 
                 {/* Expanded Details Drawer */}
                 {isExpanded && (
-                  <div className="px-4 pb-4 pt-1 border-t border-slate-100 space-y-3 text-xs">
+                  <div className="px-4 pb-4 pt-2 border-t border-slate-100 space-y-3 text-xs">
                     {trace.input_summary && (
                       <div>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                          Agent Input Summary
+                          Task Action Summary
                         </span>
                         <p className="p-2.5 rounded bg-slate-50 border border-slate-200 text-slate-700 font-mono text-[11px] break-words">
                           {trace.input_summary}
@@ -169,22 +156,16 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({ traces, workflowSt
                       </div>
                     )}
 
-                    {trace.output_summary && (
-                      <div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                          Agent Output & Structured Findings
-                        </span>
-                        <pre className="p-2.5 rounded bg-slate-900 text-emerald-400 font-mono text-[11px] overflow-x-auto whitespace-pre-wrap">
-                          {trace.output_summary}
-                        </pre>
-                      </div>
-                    )}
-
-                    {trace.error_message && (
-                      <div className="p-2.5 rounded bg-red-50 border border-red-200 text-red-800 text-[11px]">
-                        <strong>Agent Error:</strong> {trace.error_message}
-                      </div>
-                    )}
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                        Agent Payload Output & Details
+                      </span>
+                      <pre className="p-3 rounded-lg bg-slate-900 text-slate-200 font-mono text-[11px] overflow-x-auto max-h-60 leading-relaxed">
+                        {typeof trace.details === 'object'
+                          ? JSON.stringify(trace.details, null, 2)
+                          : trace.output_summary || JSON.stringify(trace, null, 2)}
+                      </pre>
+                    </div>
                   </div>
                 )}
               </div>
@@ -195,4 +176,3 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({ traces, workflowSt
     </div>
   );
 };
-
