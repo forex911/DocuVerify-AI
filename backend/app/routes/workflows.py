@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from app.database.connection import get_db
+from app.database.models import ProcessingJob
 from app.services.workflow_service import WorkflowService
 
 router = APIRouter(prefix="/workflows", tags=["Multi-Agent Workflows"])
@@ -47,6 +48,31 @@ def initiate_verification_workflow(payload: WorkflowInitiateRequest, db: Session
         "document_ids": initial_state.document_ids,
         "message": "Multi-agent verification workflow initiated. Monitor status via /api/workflows/{workflow_id}.",
     }
+
+
+@router.get("", summary="List Multi-Agent Verification Workflows")
+def list_workflows(
+    status: Optional[str] = None,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+    """Lists verification workflows with their status and reports."""
+    query = db.query(ProcessingJob).filter(ProcessingJob.job_type == "MULTI_AGENT_VERIFICATION")
+    if status:
+        query = query.filter(ProcessingJob.status == status.upper())
+    jobs = query.order_by(ProcessingJob.created_at.desc()).limit(limit).all()
+    return [
+        {
+            "workflow_id": j.id,
+            "target_id": j.target_id,
+            "status": j.status,
+            "details": j.details,
+            "error": j.error,
+            "created_at": j.created_at.isoformat() if j.created_at else None,
+            "completed_at": j.completed_at.isoformat() if j.completed_at else None,
+        }
+        for j in jobs
+    ]
 
 
 @router.get("/{workflow_id}", response_model=WorkflowStatusResponse, summary="Get Workflow Status & Results")

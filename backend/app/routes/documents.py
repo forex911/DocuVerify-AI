@@ -5,6 +5,7 @@ Documents API endpoints: upload, ingestion, extraction, and retrieval.
 from pathlib import Path
 from typing import List, Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from app.database.connection import get_db
 from app.database.models import Document, DocumentExtraction, ExtractedField, Order
@@ -266,4 +267,27 @@ def get_document_extraction(document_id: str, db: Session = Depends(get_db)):
         canonical_document=canonical,
         created_at=extraction.created_at,
     )
+
+
+@router.get("/{document_id}/file", summary="Stream Original PDF Document")
+def get_document_file(document_id: str, db: Session = Depends(get_db)):
+    """Streams the raw PDF file for inline PDF rendering and downloading."""
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document '{document_id}' not found.",
+        )
+    file_path = Path(doc.file_path)
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Physical document file missing on server.",
+        )
+    return FileResponse(
+        path=str(file_path),
+        media_type="application/pdf",
+        filename=doc.original_filename,
+    )
+
 

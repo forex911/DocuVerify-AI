@@ -343,3 +343,85 @@ backend/tests/test_validation_rules.py::test_clean_sample_no_discrepancies PASSE
 2. **Distributed Queue (Celery + Redis)**: The current implementation utilizes an in-process ThreadPool worker abstraction with database status synchronization. The service interface is designed for drop-in migration to Celery workers with a Redis message broker for high-throughput multi-node clusters.
 3. **Cloud Storage**: Replace local `uploads/` directory with AWS S3 or Google Cloud Storage using pre-signed upload URLs and server-side encryption.
 4. **LLM Safety Guardrails**: PDF document content is treated as untrusted data; prompt instructions strip embedded command injection attempts. LLMs cannot modify calculated values, rule IDs, severities, or document approval statuses.
+
+
+---
+
+## 10. Frontend Architecture: DocuVerify AI
+
+The frontend is a dedicated enterprise React 18 single-page application built with Vite, TypeScript, and Tailwind CSS. It communicates directly with the FastAPI multi-agent backend via `/api`.
+
+### Frontend Stack
+- **Framework**: React 18 + TypeScript + Vite 6
+- **Styling**: Tailwind CSS with enterprise neutral slate palette (`#f8fafc` background, `#2563eb` primary blue accent, `#dc2626` critical discrepancy, `#16a34a` verified green)
+- **Routing**: React Router v6
+- **Server State**: TanStack React Query v5 with optimistic caching & query invalidation
+- **Global State**: Zustand for lightweight UI state (active reviewer identity, sidebar collapse, toasts)
+- **Data Visualizations**: Recharts for discrepancy severity distribution & document category breakdown
+- **Document Viewing**: Interactive PDF Viewer with page navigation, provenance jumping, and download controls
+- **Iconography**: Lucide React
+
+### Key User Experiences & Views
+1. **Executive Overview (`/`)**:
+   - High-level KPIs: Total documents, awaiting human review, open discrepancies, and resolved variances.
+   - Recharts visual distributions for severity breakdown and commercial document categories.
+   - Recent immutable audit events stream.
+2. **Commercial Documents (`/documents` & `/documents/:id`)**:
+   - Filterable document registry (Invoice, Packing List, Bill of Lading, Unknown).
+   - Ingest modal with drag-and-drop PDF upload and document type hinting.
+   - In-depth document inspection displaying raw page-by-page text, SHA-256 hash, and canonical structured line items.
+3. **Approved Purchase Orders (`/orders` & `/orders/:id`)**:
+   - Authoritative ground-truth contract orders against which commercial documents are checked.
+   - Line items breakdown (SKU, description, quantity, contract unit price, line totals).
+   - Register new approved customer orders modal.
+4. **Verification Queue (`/verification`)**:
+   - Active and completed multi-agent workflows.
+   - Status, associated order reference, discrepancy count, and human review requirement badges.
+5. **Verification Workspace (`/verification/:workflowId`)**:
+   - **3-Pane Reviewer Workstation**:
+     - *Left Pane*: Document selector tabs, approved order baseline, and AI Explanation Agent briefing with risk level.
+     - *Middle Pane*: Digital PDF viewer streaming original commercial document with zoom and page jumping.
+     - *Right Pane*: Field reconciliation comparison table, discrepancy ledger, and traceable evidence inspector.
+   - Enforces human-in-the-loop governance: AI never approves or rejects documents.
+6. **Discrepancies Ledger (`/discrepancies`)**:
+   - Prioritized list of all open and resolved discrepancies.
+   - Filter by severity (Critical, High, Medium, Low) and review status.
+   - Reviewer decision modal launcher.
+7. **Human Review Decision Modal**:
+   - Enforces non-empty mandatory reviewer justification comment before recording decisions (`APPROVED`, `REJECTED`, `ACCEPTED_WITH_EXCEPTION`).
+   - Digital sign-off with authorized reviewer credentials.
+8. **Multi-Agent State & Activity (`/agents` & `/agents/:workflowId`)**:
+   - Full observability into the LangGraph state machine.
+   - Chronological execution timeline across Supervisor, Document Intelligence, Order Matching, Validation, Reconciliation, and Explanation agents.
+   - Expandable inspect drawers for intermediate agent inputs, structured outputs, and execution logs.
+9. **Immutable Audit Trail (`/audit`)**:
+   - Non-repudiable audit log tracking every document upload, agent execution, and human reviewer decision.
+   - Filterable by entity type (DISCREPANCY, DOCUMENT, ORDER, VERIFICATION) and actor ID.
+10. **Settings & Governance (`/settings`)**:
+    - Switch active reviewer identity (`Sarah Chen`, `David Kumar`, `Elena Rostova`).
+    - Deterministic rule tolerance registry overview (monetary $0.01 tolerance, quantity precision).
+    - Governance disclaimer emphasizing human-in-the-loop compliance.
+
+### Running the Full Platform Locally
+
+Launch both the backend and frontend simultaneously with PowerShell:
+```powershell
+.\run_dev.ps1
+```
+
+Or run them individually in separate terminals:
+
+**Terminal 1 (FastAPI Multi-Agent Backend):**
+```powershell
+cd backend
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+**Terminal 2 (Vite Frontend):**
+```powershell
+cd frontend
+npm run dev
+```
+
+Open your browser at `http://localhost:5173`.
+The frontend proxies all `/api/*` requests directly to `http://127.0.0.1:8000/api/*`.
