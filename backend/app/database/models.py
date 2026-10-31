@@ -228,3 +228,18 @@ class ProcessingJob(Base):
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     completed_at = Column(DateTime, nullable=True)
 
+
+class AgentExecutionLog(Base):
+    __tablename__ = "agent_execution_logs"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    workflow_id = Column(String(64), nullable=False, index=True)
+    agent_name = Column(String(64), nullable=False, index=True)
+    action = Column(String(128), nullable=False)
+    input_summary = Column(JSON, nullable=True)
+    output_summary = Column(JSON, nullable=True)
+    status = Column(String(32), default="SUCCESS", index=True)
+    duration_ms = Column(Integer, nullable=True)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False, index=True)
+
+

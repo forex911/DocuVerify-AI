@@ -19,6 +19,7 @@ from app.routes import (
     orders_router,
     reviews_router,
     verification_router,
+    workflows_router,
 )
 
 # Configure structured logging
@@ -92,6 +93,7 @@ app.include_router(health_router, prefix=settings.API_PREFIX)
 app.include_router(orders_router, prefix=settings.API_PREFIX)
 app.include_router(documents_router, prefix=settings.API_PREFIX)
 app.include_router(verification_router, prefix=settings.API_PREFIX)
+app.include_router(workflows_router, prefix=settings.API_PREFIX)
 app.include_router(reviews_router, prefix=settings.API_PREFIX)
 app.include_router(audit_router, prefix=settings.API_PREFIX)
 app.include_router(dashboard_router, prefix=settings.API_PREFIX)

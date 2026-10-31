@@ -28,7 +28,7 @@ def test_temp_dir():
 
 
 @pytest.fixture(scope="function")
-def db_session(test_temp_dir):
+def db_session(test_temp_dir, monkeypatch):
     """Provides an isolated SQLite database session for each test."""
     db_file = test_temp_dir / f"test_{tempfile.mktemp(dir='')}.db"
     engine = create_engine(
@@ -38,6 +38,11 @@ def db_session(test_temp_dir):
     )
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, future=True)
     Base.metadata.create_all(bind=engine)
+
+    # Monkeypatch SessionLocal so background workers and graph nodes use test DB
+    monkeypatch.setattr("app.database.connection.SessionLocal", TestingSessionLocal)
+    monkeypatch.setattr("app.orchestration.graph.SessionLocal", TestingSessionLocal)
+    monkeypatch.setattr("app.services.workflow_service.SessionLocal", TestingSessionLocal)
 
     # Seed rules
     db = TestingSessionLocal()

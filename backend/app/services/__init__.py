@@ -9,6 +9,7 @@ from app.services.comparison_engine import ComparisonEngine
 from app.services.discrepancy_engine import DiscrepancyEngine
 from app.services.explanation_service import ExplanationService
 from app.services.audit_service import AuditService
+from app.services.workflow_service import WorkflowService
 
 __all__ = [
     "ocr_service",
@@ -19,5 +20,6 @@ __all__ = [
     "DiscrepancyEngine",
     "ExplanationService",
     "AuditService",
+    "WorkflowService",
 ]
 
