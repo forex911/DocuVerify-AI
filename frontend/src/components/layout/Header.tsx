@@ -59,7 +59,7 @@ export const Header: React.FC<HeaderProps> = ({
       case 'settings':
         return 'Settings';
       default:
-        return segment.length > 15 ? `${segment.slice(0, 12)}...` : segment;
+        return (segment || '').length > 15 ? `${segment.slice(0, 12)}...` : (segment || '');
     }
   };
 

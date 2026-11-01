@@ -40,15 +40,13 @@ def get_discrepancies(
 @router.get("/discrepancies/{discrepancy_id}", response_model=DiscrepancyResponse, summary="Get Discrepancy Evidence")
 def get_discrepancy_detail(discrepancy_id: str, db: Session = Depends(get_db)):
     """Retrieves full traceable evidence for a specific discrepancy."""
-    items = DiscrepancyEngine.list_discrepancies(db=db)
-    for item in items:
-        if item.id == discrepancy_id:
-            return item
-
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Discrepancy '{discrepancy_id}' not found.",
-    )
+    items = DiscrepancyEngine.list_discrepancies(db=db, discrepancy_id=discrepancy_id)
+    if not items:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Discrepancy '{discrepancy_id}' not found.",
+        )
+    return items[0]
 
 
 @router.post(

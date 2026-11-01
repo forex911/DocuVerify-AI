@@ -33,7 +33,7 @@ def db_session(test_temp_dir, monkeypatch):
     db_file = test_temp_dir / f"test_{tempfile.mktemp(dir='')}.db"
     engine = create_engine(
         f"sqlite:///{db_file}",
-        connect_args={"check_same_thread": False},
+        connect_args={"check_same_thread": False, "timeout": 15},
         future=True,
     )
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, future=True)

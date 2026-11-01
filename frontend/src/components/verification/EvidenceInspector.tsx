@@ -80,7 +80,7 @@ export const EvidenceInspector: React.FC<EvidenceInspectorProps> = ({
           <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-lg space-y-1.5">
             <div className="flex items-center justify-between text-[11px] text-amber-900 font-medium">
               <span className="flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5" /> Document: {discrepancy.document_filename || `${discrepancy.document_id.slice(0, 8)}...`}
+                <FileText className="w-3.5 h-3.5" /> Document: {discrepancy.document_filename || (discrepancy.document_id ? `${discrepancy.document_id.slice(0, 8)}...` : 'Multi-Document')}
               </span>
               {page && (
                 <span className="px-1.5 py-0.5 bg-amber-200/80 rounded font-semibold text-[10px]">

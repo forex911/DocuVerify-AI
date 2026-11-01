@@ -92,7 +92,7 @@ export const AgentActivity: React.FC = () => {
             >
               {workflows.map((wf) => (
                 <option key={wf.workflow_id} value={wf.workflow_id}>
-                  {wf.workflow_id.slice(0, 18)}... &mdash; {wf.status} ({new Date(wf.created_at).toLocaleTimeString()})
+                  {wf.workflow_id ? `${wf.workflow_id.slice(0, 18)}...` : 'Workflow'} &mdash; {wf.status} ({wf.created_at ? new Date(wf.created_at).toLocaleTimeString() : '—'})
                 </option>
               ))}
             </select>

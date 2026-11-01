@@ -90,13 +90,13 @@ export const OrderDetail: React.FC = () => {
         <div className="card-subtle p-3.5">
           <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Quantity</span>
           <span className="text-lg font-bold text-slate-900 font-mono mt-1 block">
-            {order.quantity.toLocaleString()} PCS
+            {order.quantity != null ? `${order.quantity.toLocaleString()} PCS` : '—'}
           </span>
         </div>
         <div className="card-subtle p-3.5">
           <span className="text-[10px] uppercase font-bold text-slate-400 block">Contract Unit Price</span>
           <span className="text-lg font-bold text-slate-900 font-mono mt-1 block">
-            ${Number(order.unit_price).toFixed(2)}
+            {order.unit_price != null && !isNaN(Number(order.unit_price)) ? `$${Number(order.unit_price).toFixed(2)}` : '—'}
           </span>
         </div>
         <div className="card-subtle p-3.5">
@@ -108,43 +108,52 @@ export const OrderDetail: React.FC = () => {
       </div>
 
       {/* Order Items Table */}
-      <div className="card-subtle overflow-hidden">
-        <div className="p-4 border-b border-slate-200 bg-slate-50/75">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-            Approved Line Items ({order.items.length})
-          </h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50/50">
-                <th className="table-th">SKU</th>
-                <th className="table-th">Product Description</th>
-                <th className="table-th">Quantity</th>
-                <th className="table-th">Unit Price</th>
-                <th className="table-th">Line Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {order.items.map((it, idx) => (
-                <tr key={it.id || idx} className="hover:bg-slate-50/60">
-                  <td className="table-td font-mono font-semibold text-slate-800">{it.sku}</td>
-                  <td className="table-td text-slate-700">{it.description}</td>
-                  <td className="table-td font-mono text-slate-800">
-                    {it.quantity} {it.unit}
-                  </td>
-                  <td className="table-td font-mono text-slate-700">
-                    ${Number(it.unit_price).toFixed(2)}
-                  </td>
-                  <td className="table-td font-mono font-bold text-slate-900">
-                    ${Number(it.line_total).toFixed(2)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {(() => {
+        const items = order.items || [];
+        return (
+          <div className="card-subtle overflow-hidden">
+            <div className="p-4 border-b border-slate-200 bg-slate-50/75">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                Approved Line Items ({items.length})
+              </h3>
+            </div>
+            <div className="overflow-x-auto">
+              {items.length === 0 ? (
+                <p className="p-4 text-xs text-slate-400 text-center">No line items recorded for this order.</p>
+              ) : (
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50/50">
+                      <th className="table-th">SKU</th>
+                      <th className="table-th">Product Description</th>
+                      <th className="table-th">Quantity</th>
+                      <th className="table-th">Unit Price</th>
+                      <th className="table-th">Line Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {items.map((it, idx) => (
+                      <tr key={it.id || idx} className="hover:bg-slate-50/60">
+                        <td className="table-td font-mono font-semibold text-slate-800">{it.sku || 'N/A'}</td>
+                        <td className="table-td text-slate-700">{it.description}</td>
+                        <td className="table-td font-mono text-slate-800">
+                          {it.quantity != null ? it.quantity : '—'} {it.unit || ''}
+                        </td>
+                        <td className="table-td font-mono text-slate-700">
+                          {it.unit_price != null && !isNaN(Number(it.unit_price)) ? `$${Number(it.unit_price).toFixed(2)}` : '—'}
+                        </td>
+                        <td className="table-td font-mono font-bold text-slate-900">
+                          {it.line_total != null && !isNaN(Number(it.line_total)) ? `$${Number(it.line_total).toFixed(2)}` : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Associated Ingested Documents */}
       <div className="card-subtle p-5 space-y-3">

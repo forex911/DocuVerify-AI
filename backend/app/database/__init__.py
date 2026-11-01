@@ -2,6 +2,8 @@
 Database package initialization and table creation.
 """
 
+from sqlalchemy import text
+from app.core.config import settings
 from app.database.connection import engine, Base, SessionLocal
 from app.database.models import ValidationRule
 from app.core.constants import RULE_DEFINITIONS
@@ -9,6 +11,13 @@ from app.core.constants import RULE_DEFINITIONS
 
 def init_db():
     """Create all tables and seed default validation rules if not present."""
+    if settings.DATABASE_URL.startswith("sqlite") and ":memory:" not in settings.DATABASE_URL:
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("PRAGMA journal_mode=WAL"))
+                conn.commit()
+        except Exception:
+            pass
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:

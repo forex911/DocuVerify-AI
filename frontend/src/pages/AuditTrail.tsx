@@ -33,10 +33,10 @@ export const AuditTrail: React.FC = () => {
   const filteredLogs = logs.filter((l) => {
     const q = search.toLowerCase();
     return (
-      l.event_type.toLowerCase().includes(q) ||
-      l.entity_id.toLowerCase().includes(q) ||
-      l.actor_id.toLowerCase().includes(q) ||
-      JSON.stringify(l.details).toLowerCase().includes(q)
+      (l.event_type || '').toLowerCase().includes(q) ||
+      (l.entity_id || '').toLowerCase().includes(q) ||
+      (l.actor_id || '').toLowerCase().includes(q) ||
+      JSON.stringify(l.details || {}).toLowerCase().includes(q)
     );
   });
 

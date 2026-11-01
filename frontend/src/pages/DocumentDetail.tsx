@@ -118,8 +118,8 @@ export const DocumentDetailContent: React.FC = () => {
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
             File Integrity (SHA-256)
           </span>
-          <span className="font-mono text-[11px] text-slate-600 mt-0.5 block truncate" title={document.file_hash}>
-            {document.file_hash.slice(0, 16)}...
+          <span className="font-mono text-[11px] text-slate-600 mt-0.5 block truncate" title={document.file_hash || ''}>
+            {document.file_hash ? `${document.file_hash.slice(0, 16)}...` : 'N/A'}
           </span>
         </div>
         <div className="card-subtle p-3 text-xs">
@@ -127,8 +127,8 @@ export const DocumentDetailContent: React.FC = () => {
             Page Count & Size
           </span>
           <span className="text-slate-800 mt-0.5 block font-medium">
-            {document.page_count} {document.page_count === 1 ? 'Page' : 'Pages'} &bull;{' '}
-            {(document.file_size / 1024).toFixed(1)} KB
+            {document.page_count || 1} {document.page_count === 1 ? 'Page' : 'Pages'}
+            {document.file_size ? ` • ${(document.file_size / 1024).toFixed(1)} KB` : ''}
           </span>
         </div>
       </div>
@@ -220,10 +220,10 @@ export const DocumentDetailContent: React.FC = () => {
                           {item.quantity} {item.unit}
                         </td>
                         <td className="table-td font-mono text-slate-700">
-                          {item.unit_price != null ? `$${Number(item.unit_price).toFixed(2)}` : '—'}
+                          {item.unit_price != null && !isNaN(Number(item.unit_price)) ? `$${Number(item.unit_price).toFixed(2)}` : '—'}
                         </td>
                         <td className="table-td font-mono font-semibold text-slate-900">
-                          {item.line_total != null ? `$${Number(item.line_total).toFixed(2)}` : '—'}
+                          {item.line_total != null && !isNaN(Number(item.line_total)) ? `$${Number(item.line_total).toFixed(2)}` : '—'}
                         </td>
                       </tr>
                     ))}

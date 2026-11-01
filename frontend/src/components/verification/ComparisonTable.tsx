@@ -43,6 +43,12 @@ const getFieldProv = (doc: any, key: string) => {
   };
 };
 
+const formatMoney = (val: any): string | null => {
+  if (val == null || val === '') return null;
+  const num = Number(val);
+  return isNaN(num) ? String(val) : `$${num.toFixed(2)}`;
+};
+
 const getItems = (doc: any): any[] => {
   if (!doc) return [];
   if (Array.isArray(doc.items)) return doc.items;
@@ -121,40 +127,40 @@ export const ComparisonTable: React.FC<ComparisonTableProps> = ({
     {
       fieldName: 'unit_price',
       label: 'Unit Price',
-      orderValue: order ? `$${Number(order.unit_price).toFixed(2)}` : null,
-      docValue: firstItem?.unit_price != null ? `$${Number(firstItem.unit_price).toFixed(2)}` : null,
+      orderValue: order ? formatMoney(order.unit_price) : null,
+      docValue: firstItem?.unit_price != null ? formatMoney(firstItem.unit_price) : null,
       pageNumber: firstItem?.page_number,
       sourceText: firstItem?.source_text,
     },
     {
       fieldName: 'subtotal',
       label: 'Subtotal',
-      orderValue: order ? `$${Number(order.subtotal).toFixed(2)}` : null,
-      docValue: subtotalVal != null ? `$${Number(subtotalVal).toFixed(2)}` : null,
+      orderValue: order ? formatMoney(order.subtotal) : null,
+      docValue: formatMoney(subtotalVal),
       pageNumber: subtotalProv.pageNumber,
       sourceText: subtotalProv.sourceText,
     },
     {
       fieldName: 'tax',
       label: 'Tax / VAT',
-      orderValue: order ? `$${Number(order.tax).toFixed(2)}` : null,
-      docValue: taxVal != null ? `$${Number(taxVal).toFixed(2)}` : null,
+      orderValue: order ? formatMoney(order.tax) : null,
+      docValue: formatMoney(taxVal),
       pageNumber: taxProv.pageNumber,
       sourceText: taxProv.sourceText,
     },
     {
       fieldName: 'freight',
       label: 'Freight Charges',
-      orderValue: order ? `$${Number(order.freight).toFixed(2)}` : null,
-      docValue: freightVal != null ? `$${Number(freightVal).toFixed(2)}` : null,
+      orderValue: order ? formatMoney(order.freight) : null,
+      docValue: formatMoney(freightVal),
       pageNumber: freightProv.pageNumber,
       sourceText: freightProv.sourceText,
     },
     {
       fieldName: 'grand_total',
       label: 'Grand Total Amount',
-      orderValue: order ? `$${Number(order.grand_total).toFixed(2)}` : null,
-      docValue: grandTotalVal != null ? `$${Number(grandTotalVal).toFixed(2)}` : null,
+      orderValue: order ? formatMoney(order.grand_total) : null,
+      docValue: formatMoney(grandTotalVal),
       pageNumber: grandTotalProv.pageNumber,
       sourceText: grandTotalProv.sourceText,
     },
@@ -179,7 +185,7 @@ export const ComparisonTable: React.FC<ComparisonTableProps> = ({
   const findDiscrepancy = (fieldName: string) => {
     return discrepancies.find((d) => {
       const df = (d.field_name || '').toLowerCase();
-      const fn = fieldName.toLowerCase();
+      const fn = (fieldName || '').toLowerCase();
       return df === fn || (fn === 'grand_total' && df.includes('total')) || (fn === 'quantity' && df.includes('qty'));
     });
   };

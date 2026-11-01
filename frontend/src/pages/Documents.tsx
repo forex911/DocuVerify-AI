@@ -37,8 +37,8 @@ export const Documents: React.FC = () => {
   const filteredDocuments = documents.filter((doc) => {
     const q = search.toLowerCase();
     return (
-      doc.original_filename.toLowerCase().includes(q) ||
-      doc.id.toLowerCase().includes(q) ||
+      (doc.original_filename || '').toLowerCase().includes(q) ||
+      (doc.id || '').toLowerCase().includes(q) ||
       (doc.order_id && doc.order_id.toLowerCase().includes(q))
     );
   });
@@ -147,7 +147,7 @@ export const Documents: React.FC = () => {
                             {doc.original_filename}
                           </Link>
                           <span className="font-mono text-[10px] text-slate-400">
-                            ID: {doc.id.slice(0, 12)}... &bull; {(doc.file_size / 1024).toFixed(1)} KB
+                            ID: {doc.id ? `${doc.id.slice(0, 12)}...` : 'N/A'}{doc.file_size ? ` • ${(doc.file_size / 1024).toFixed(1)} KB` : ''}
                           </span>
                         </div>
                       </div>
@@ -155,7 +155,7 @@ export const Documents: React.FC = () => {
 
                     <td className="table-td">
                       <span className="capitalize font-medium text-slate-700 px-2 py-0.5 bg-slate-100 rounded text-[11px]">
-                        {doc.document_type.replace('_', ' ')}
+                        {(doc.document_type || 'UNKNOWN').replace('_', ' ')}
                       </span>
                     </td>
 

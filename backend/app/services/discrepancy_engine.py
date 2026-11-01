@@ -82,6 +82,7 @@ class DiscrepancyEngine:
     def list_discrepancies(
         cls,
         db: Session,
+        discrepancy_id: Optional[str] = None,
         document_id: Optional[str] = None,
         order_id: Optional[str] = None,
         severity: Optional[str] = None,
@@ -91,6 +92,8 @@ class DiscrepancyEngine:
         """Queries discrepancies with flexible filtering and joins document metadata."""
         query = db.query(Discrepancy).join(Document, Discrepancy.document_id == Document.id, isouter=True)
 
+        if discrepancy_id:
+            query = query.filter(Discrepancy.id == discrepancy_id)
         if document_id:
             query = query.filter(Discrepancy.document_id == document_id)
         if order_id:

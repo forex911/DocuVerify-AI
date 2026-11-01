@@ -89,9 +89,9 @@ export const Orders: React.FC = () => {
   const filteredOrders = orders.filter((o) => {
     const q = search.toLowerCase();
     return (
-      o.id.toLowerCase().includes(q) ||
-      o.customer_name.toLowerCase().includes(q) ||
-      o.destination.toLowerCase().includes(q)
+      (o.id || '').toLowerCase().includes(q) ||
+      (o.customer_name || '').toLowerCase().includes(q) ||
+      (o.destination || '').toLowerCase().includes(q)
     );
   });
 

@@ -56,6 +56,7 @@ export const Dashboard: React.FC = () => {
     { name: 'Medium', value: summary.medium_discrepancies, color: '#d97706' },
     { name: 'Low', value: summary.low_discrepancies, color: '#2563eb' },
   ];
+  const activeSeverityData = severityData.filter((d) => d.value > 0);
 
   const typeData = Object.entries(summary.document_type_breakdown || {}).map(([type, count]) => ({
     name:
@@ -165,15 +166,15 @@ export const Dashboard: React.FC = () => {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={severityData}
+                    data={activeSeverityData}
                     cx="50%"
                     cy="50%"
                     innerRadius={50}
                     outerRadius={80}
-                    paddingAngle={4}
+                    paddingAngle={activeSeverityData.length > 1 ? 4 : 0}
                     dataKey="value"
                   >
-                    {severityData.map((entry, index) => (
+                    {activeSeverityData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -290,16 +291,16 @@ export const Dashboard: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-2.5 px-4 text-slate-600">
-                      {log.entity_type}: <span className="font-mono">{log.entity_id.slice(0, 8)}...</span>
+                      {log.entity_type}: <span className="font-mono">{log.entity_id ? `${log.entity_id.slice(0, 8)}...` : 'N/A'}</span>
                     </td>
                     <td className="py-2.5 px-4 font-medium text-slate-700">
-                      {log.actor_id}
+                      {log.actor_id || 'System'}
                     </td>
                     <td className="py-2.5 px-4 text-slate-500 max-w-xs truncate">
-                      {JSON.stringify(log.details)}
+                      {log.details ? (typeof log.details === 'string' ? log.details : JSON.stringify(log.details)) : '—'}
                     </td>
                     <td className="py-2.5 px-4 text-slate-400 text-[11px]">
-                      {new Date(log.created_at).toLocaleString()}
+                      {log.created_at ? new Date(log.created_at).toLocaleString() : '—'}
                     </td>
                   </tr>
                 ))}

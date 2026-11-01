@@ -34,6 +34,16 @@ class ValidationAgent:
         validation_results: List[Dict[str, Any]] = []
 
         order_data = state.order_match_result.get("matched_order") if state.order_match_result else None
+        if not order_data and state.order_id:
+            from app.tools.order_lookup import lookup_order_by_id
+            order_data = lookup_order_by_id(db, state.order_id)
+            if order_data and not state.order_match_result:
+                state.order_match_result = {
+                    "matched_order": order_data,
+                    "match_type": "EXPLICIT_ORDER_ID",
+                    "confidence": 1.0,
+                }
+
         if not order_data:
             logs.append({
                 "agent_name": cls.AGENT_NAME,
@@ -57,6 +67,7 @@ class ValidationAgent:
         for doc_id, doc_dict in state.extracted_documents.items():
             doc_type = doc_dict.get("document_type", "document")
             fields = doc_dict.get("fields", {})
+            items = doc_dict.get("items", [])
 
             # 1. ID-001: Order reference mismatch
             if doc_dict.get("order_reference"):
@@ -107,8 +118,20 @@ class ValidationAgent:
 
             # 4. QTY-001: Quantity mismatch
             qty_prov = fields.get("quantity", {})
-            if qty_prov.get("numeric_value") is not None and order_qty is not None:
+            doc_qty_dec = None
+            if qty_prov.get("numeric_value") is not None:
                 doc_qty_dec = Decimal(str(qty_prov["numeric_value"]))
+            elif doc_dict.get("quantity") is not None:
+                doc_qty_dec = Decimal(str(doc_dict["quantity"]))
+            elif items:
+                try:
+                    item_qtys = [Decimal(str(it["quantity"])) for it in items if it.get("quantity") is not None]
+                    if item_qtys:
+                        doc_qty_dec = sum(item_qtys)
+                except Exception:
+                    pass
+
+            if doc_qty_dec is not None and order_qty is not None:
                 d_qty = validate_quantity(
                     expected_qty=order_qty,
                     actual_qty=doc_qty_dec,
@@ -122,7 +145,6 @@ class ValidationAgent:
                     validation_results.append(d_qty)
 
             # 5. FIN-002: Line item arithmetic
-            items = doc_dict.get("items", [])
             subtotal = Decimal(str(doc_dict["subtotal"])) if doc_dict.get("subtotal") is not None else None
             arith_discs = validate_line_arithmetic(items, subtotal=subtotal, document_id=doc_id, doc_type=doc_type)
             all_discrepancies.extend(arith_discs)

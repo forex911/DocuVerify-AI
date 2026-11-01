@@ -24,6 +24,9 @@ venv.bak/
 *.sqlite3
 *.db
 *.db3
+*.db-wal
+*.db-shm
+*.db-journal
 
 # Uploads
 backend/uploads/*

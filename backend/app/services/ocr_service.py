@@ -32,8 +32,14 @@ class OCRService:
         if self._is_available is not None:
             return self._is_available
 
+        import shutil
+        cmd = settings.TESSERACT_CMD or getattr(getattr(pytesseract, "pytesseract", None), "tesseract_cmd", "tesseract")
+        if not shutil.which(cmd):
+            self._is_available = False
+            return False
+
         try:
-            version = pytesseract.get_tesseract_version(timeout=2)
+            version = pytesseract.get_tesseract_version()
             logger.info("Tesseract OCR detected, version: %s", version)
             self._is_available = True
         except Exception as e:

@@ -60,6 +60,7 @@ export const VerificationQueue: React.FC = () => {
             className="text-xs rounded-lg border border-slate-200 bg-slate-50/50 px-2.5 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
           >
             <option value="">All Workflows</option>
+            <option value="REVIEW_REQUIRED">Review Required</option>
             <option value="COMPLETED">Completed</option>
             <option value="RUNNING">Running</option>
             <option value="PENDING">Pending</option>
@@ -103,8 +104,10 @@ export const VerificationQueue: React.FC = () => {
                 {workflows.map((wf) => {
                   const details = wf.details || {};
                   const discrepancyCount =
-                    details.discrepancies?.length ||
-                    (details.final_investigation_report?.total_discrepancies ?? 0);
+                    details.discrepancies?.length ??
+                    details.total_discrepancies ??
+                    details.final_investigation_report?.total_discrepancies ??
+                    0;
                   const requiresHumanReview =
                     details.requires_human_review !== false;
 
@@ -114,7 +117,7 @@ export const VerificationQueue: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <Bot className="w-4 h-4 text-blue-600 shrink-0" />
                           <span className="font-mono font-bold text-slate-900">
-                            {wf.workflow_id.slice(0, 16)}...
+                            {wf.workflow_id ? `${wf.workflow_id.slice(0, 16)}...` : 'Workflow'}
                           </span>
                         </div>
                       </td>
@@ -153,7 +156,7 @@ export const VerificationQueue: React.FC = () => {
                       </td>
 
                       <td className="table-td text-slate-400 text-[11px]">
-                        {new Date(wf.created_at).toLocaleString()}
+                        {wf.created_at ? new Date(wf.created_at).toLocaleString() : '—'}
                       </td>
 
                       <td className="table-td text-right">
