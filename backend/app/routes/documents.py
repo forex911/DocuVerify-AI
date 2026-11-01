@@ -288,6 +288,11 @@ def get_document_file(document_id: str, db: Session = Depends(get_db)):
         path=str(file_path),
         media_type="application/pdf",
         filename=doc.original_filename,
+        content_disposition_type="inline",
+        headers={
+            "X-Content-Type-Options": "nosniff",
+            "Access-Control-Allow-Origin": "*",
+        },
     )
 
 

@@ -49,6 +49,17 @@ export const LaunchVerificationModal: React.FC<LaunchVerificationModalProps> = (
     );
   };
 
+  const isAllSelected = documents.length > 0 && selectedDocs.length === documents.length;
+  const isIndeterminate = selectedDocs.length > 0 && selectedDocs.length < documents.length;
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedDocs([]);
+    } else {
+      setSelectedDocs(documents.map((d) => d.id));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedDocs.length === 0) {
@@ -96,10 +107,26 @@ export const LaunchVerificationModal: React.FC<LaunchVerificationModalProps> = (
 
         {/* Select Documents */}
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">
-            Select Documents to Verify ({selectedDocs.length} selected)
-          </label>
-          <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-lg divide-y divide-slate-100 bg-slate-50/50">
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-xs font-semibold text-slate-700">
+              Select Documents to Verify ({selectedDocs.length} of {documents.length} selected)
+            </label>
+            {documents.length > 0 && (
+              <label className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 font-semibold cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={isAllSelected}
+                  ref={(input) => {
+                    if (input) input.indeterminate = isIndeterminate;
+                  }}
+                  onChange={toggleSelectAll}
+                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer"
+                />
+                <span>Select All</span>
+              </label>
+            )}
+          </div>
+          <div className="max-h-52 overflow-y-auto border border-slate-200 rounded-lg divide-y divide-slate-100 bg-slate-50/50">
             {documents.length === 0 ? (
               <p className="p-4 text-xs text-slate-500 text-center">
                 No uploaded documents found. Please upload a commercial document first.
@@ -114,7 +141,7 @@ export const LaunchVerificationModal: React.FC<LaunchVerificationModalProps> = (
                     type="checkbox"
                     checked={selectedDocs.includes(doc.id)}
                     onChange={() => toggleDoc(doc.id)}
-                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
                   />
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium text-slate-800 truncate">

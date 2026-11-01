@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   FileText,
   ExternalLink,
@@ -6,8 +6,6 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCcw,
-  AlignLeft,
-  FileSearch,
   CheckCircle2,
   Copy,
 } from 'lucide-react';
@@ -38,6 +36,18 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
     enabled: !!documentId,
   });
 
+  const fileUrl = documentId ? documentsService.getDocumentFileUrl(documentId) : '';
+
+  const pdfUrlWithParams = useMemo(() => {
+    if (!fileUrl) return '';
+    const params: string[] = [];
+    if (highlightPage) params.push(`page=${highlightPage}`);
+    if (zoomLevel !== 100) params.push(`zoom=${zoomLevel}`);
+    params.push('toolbar=1');
+    const hash = params.join('&');
+    return hash ? `${fileUrl}#${hash}` : fileUrl;
+  }, [fileUrl, highlightPage, zoomLevel]);
+
   if (!documentId) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-8 bg-slate-50 border border-slate-200 rounded-xl text-center">
@@ -49,9 +59,6 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
       </div>
     );
   }
-
-  const fileUrl = documentsService.getDocumentFileUrl(documentId);
-  const pdfWithPage = highlightPage ? `${fileUrl}#page=${highlightPage}` : fileUrl;
 
   const handleZoomIn = () => setZoomLevel((z) => Math.min(z + 20, 200));
   const handleZoomOut = () => setZoomLevel((z) => Math.max(z - 20, 60));
@@ -109,7 +116,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
             <>
               <button
                 onClick={handleZoomOut}
-                className="p-1.5 rounded hover:bg-slate-200 text-slate-600"
+                className="p-1.5 rounded hover:bg-slate-200 text-slate-600 transition"
                 title="Zoom Out"
               >
                 <ZoomOut className="w-3.5 h-3.5" />
@@ -119,14 +126,14 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
               </span>
               <button
                 onClick={handleZoomIn}
-                className="p-1.5 rounded hover:bg-slate-200 text-slate-600"
+                className="p-1.5 rounded hover:bg-slate-200 text-slate-600 transition"
                 title="Zoom In"
               >
                 <ZoomIn className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={handleResetZoom}
-                className="p-1.5 rounded hover:bg-slate-200 text-slate-600"
+                className="p-1.5 rounded hover:bg-slate-200 text-slate-600 transition"
                 title="Reset Zoom"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -139,7 +146,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
             href={fileUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="p-1.5 rounded hover:bg-slate-200 text-slate-600 inline-flex items-center"
+            className="p-1.5 rounded hover:bg-slate-200 text-slate-600 inline-flex items-center transition"
             title="Open in new window"
           >
             <ExternalLink className="w-3.5 h-3.5" />
@@ -147,7 +154,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
           <a
             href={fileUrl}
             download={filename}
-            className="p-1.5 rounded hover:bg-slate-200 text-slate-600 inline-flex items-center"
+            className="p-1.5 rounded hover:bg-slate-200 text-slate-600 inline-flex items-center transition"
             title="Download PDF"
           >
             <Download className="w-3.5 h-3.5" />
@@ -175,33 +182,15 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 w-full h-full min-h-[500px] bg-slate-100 relative overflow-hidden">
+      <div className="flex-1 w-full h-full min-h-[520px] bg-slate-100 relative overflow-hidden flex flex-col">
         {viewMode === 'pdf' ? (
-          <div className="w-full h-full flex items-center justify-center overflow-auto p-1">
-            <object
-              data={pdfWithPage}
-              type="application/pdf"
-              className="w-full h-full min-h-[550px] border-none rounded-b-lg"
-              style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center' }}
-            >
-              <iframe
-                src={pdfWithPage}
-                title={filename}
-                className="w-full h-full min-h-[550px] border-none"
-              >
-                <div className="p-8 text-center text-xs text-slate-500">
-                  <p>Your browser could not embed this PDF directly.</p>
-                  <a
-                    href={fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline font-semibold mt-2 inline-block"
-                  >
-                    Click here to open and view the PDF in a new tab &rarr;
-                  </a>
-                </div>
-              </iframe>
-            </object>
+          <div className="w-full h-full flex-1 relative bg-white">
+            <iframe
+              key={`${documentId}-${highlightPage || 1}`}
+              src={pdfUrlWithParams}
+              title={filename}
+              className="w-full h-full min-h-[550px] border-none bg-white rounded-b-xl"
+            />
           </div>
         ) : (
           <div className="p-4 h-full overflow-y-auto space-y-4 bg-white text-xs">
